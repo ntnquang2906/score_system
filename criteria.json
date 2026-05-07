@@ -1,0 +1,1410 @@
+{
+    "functions": {
+        "basic": {
+            "name": "Nghiên cứu cơ bản",
+            "groups": [
+                {
+                    "id": "DT1",
+                    "title": "Đt1 - Quá trình triển khai",
+                    "max": 20,
+                    "criteria": [
+                        {
+                            "id": "basic_new_direction",
+                            "text": "Có ban hành hướng nghiên cứu mới và có căn cứ gắn với công nghệ chiến lược/công nghệ mới nổi không?",
+                            "max": 2,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 2
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi số/quyết định ban hành hướng nghiên cứu mới."
+                        },
+                        {
+                            "id": "basic_outputs_new_direction",
+                            "text": "Có từ 02 đề tài/công bố khoa học gắn trực tiếp với hướng nghiên cứu mới không?",
+                            "max": 2,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 2
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi tên/số lượng đề tài, công bố liên quan."
+                        },
+                        {
+                            "id": "basic_new_direction_hr",
+                            "text": "Có nhóm nghiên cứu chuyên trách hoặc kế hoạch đào tạo phục vụ hướng mới không?",
+                            "max": 2,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 2
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi tên nhóm, số nhân lực, kế hoạch đào tạo."
+                        },
+                        {
+                            "id": "basic_new_direction_infra",
+                            "text": "Có hạ tầng hoặc liên kết hạ tầng phục vụ hướng nghiên cứu mới không?",
+                            "max": 2,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 2
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi phòng lab, thiết bị, phần mềm hoặc đơn vị liên kết."
+                        },
+                        {
+                            "id": "basic_leadership_role",
+                            "text": "Lãnh đạo có chỉ đạo triển khai hướng nghiên cứu mới bằng quyết định/kế hoạch/chỉ tiêu không?",
+                            "max": 2,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 2
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi quyết định, kế hoạch năm hoặc chỉ tiêu nội bộ."
+                        },
+                        {
+                            "id": "basic_collaboration",
+                            "text": "Có hợp tác nghiên cứu với đối tác phù hợp, có triển khai và có vai trò rõ ràng không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 5
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi tên đối tác, nội dung hợp tác, vai trò."
+                        },
+                        {
+                            "id": "basic_integrity",
+                            "text": "Có quy chế liêm chính khoa học và đạo đức nghiên cứu không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "integrity_penalty"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "retracted",
+                                    "label": "Số công bố bị thu hồi trong 3 năm"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "DT2",
+                    "title": "Đt2 - Kết quả đầu ra",
+                    "max": 30,
+                    "criteria": [
+                        {
+                            "id": "basic_international_publication",
+                            "text": "Có công bố quốc tế đạt ngưỡng tính điểm không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "weighted_range",
+                                "weights": {
+                                    "q1": 5,
+                                    "q2": 3,
+                                    "q3": 2,
+                                    "q4": 1
+                                },
+                                "ranges": [
+                                    {
+                                        "min": 1,
+                                        "max": 4,
+                                        "score_min": 1,
+                                        "score_mid": 1.5,
+                                        "score_max": 2
+                                    },
+                                    {
+                                        "min": 5,
+                                        "max": 12,
+                                        "score_min": 2,
+                                        "score_mid": 2.5,
+                                        "score_max": 3
+                                    },
+                                    {
+                                        "min": 13,
+                                        "max": 19,
+                                        "score_min": 4,
+                                        "score_mid": 4.5,
+                                        "score_max": 5
+                                    },
+                                    {
+                                        "min": 20,
+                                        "max": null,
+                                        "score": 6
+                                    }
+                                ]
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "q1",
+                                    "label": "Số bài Q1"
+                                },
+                                {
+                                    "name": "q2",
+                                    "label": "Số bài Q2"
+                                },
+                                {
+                                    "name": "q3",
+                                    "label": "Số bài Q3"
+                                },
+                                {
+                                    "name": "q4",
+                                    "label": "Số bài Q4"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "basic_fwci_hindex",
+                            "text": "Có chỉ số FWCI/H-index đạt ngưỡng đánh giá không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "basic_fwci_hindex"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "fwci_org",
+                                    "label": "FWCI đơn vị"
+                                },
+                                {
+                                    "name": "fwci_avg",
+                                    "label": "FWCI trung bình ngành/VN"
+                                },
+                                {
+                                    "name": "hindex_org",
+                                    "label": "H-index đơn vị"
+                                },
+                                {
+                                    "name": "hindex_avg",
+                                    "label": "H-index trung bình ngành"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "basic_domestic_publication",
+                            "text": "Có ấn phẩm khoa học trong nước/sách/báo cáo hội nghị đạt ngưỡng không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "domestic_publication"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "sqt",
+                                    "label": "Sách quốc tế"
+                                },
+                                {
+                                    "name": "str",
+                                    "label": "Sách/chuyên khảo trong nước"
+                                },
+                                {
+                                    "name": "bc",
+                                    "label": "Báo cáo hội nghị"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "DT3",
+                    "title": "Đt3 - Hiệu quả sử dụng nguồn lực",
+                    "max": 25,
+                    "criteria": [
+                        {
+                            "id": "basic_publication_fte",
+                            "text": "Có số công bố quốc tế/FTE đạt ngưỡng so với trung bình quốc gia không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "ratio_range",
+                                "numerator": "t_org",
+                                "denominator": "t_vn",
+                                "ranges": [
+                                    {
+                                        "min": 1.3,
+                                        "max": null,
+                                        "score": 10
+                                    },
+                                    {
+                                        "min": 1.15,
+                                        "max": 1.3,
+                                        "score_min": 8,
+                                        "score_mid": 8.5,
+                                        "score_max": 9
+                                    },
+                                    {
+                                        "min": 1,
+                                        "max": 1.15,
+                                        "score_min": 5,
+                                        "score_mid": 6,
+                                        "score_max": 7
+                                    },
+                                    {
+                                        "min": 0.43,
+                                        "max": 1,
+                                        "score_min": 3,
+                                        "score_mid": 3.5,
+                                        "score_max": 4
+                                    },
+                                    {
+                                        "min": 0,
+                                        "max": 0.43,
+                                        "score_min": 1,
+                                        "score_mid": 1.5,
+                                        "score_max": 2
+                                    }
+                                ]
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "t_org",
+                                    "label": "T đơn vị"
+                                },
+                                {
+                                    "name": "t_vn",
+                                    "label": "T VN ngành"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "basic_cost_publication",
+                            "text": "Có chi phí trung bình cho mỗi công bố đạt ngưỡng hiệu quả không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "inverse_cost",
+                                "max_score": 5
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "threshold",
+                                    "label": "Ngưỡng tối thiểu"
+                                },
+                                {
+                                    "name": "actual",
+                                    "label": "Chi phí thực tế"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "basic_strong_group_budget",
+                            "text": "Có tỷ trọng chi cho nhóm nghiên cứu mạnh đạt ngưỡng không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "positive_ratio_cap",
+                                "max_score": 10
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "actual",
+                                    "label": "Tỷ lệ thực tế (%)"
+                                },
+                                {
+                                    "name": "threshold",
+                                    "label": "Ngưỡng tối đa (%)"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "DT4",
+                    "title": "Đt4 - Tác động",
+                    "max": 25,
+                    "criteria": [
+                        {
+                            "id": "basic_academic_impact",
+                            "text": "Có tác động đến định hướng học thuật không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 10
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi kết quả tạo hướng nghiên cứu, chương trình nghiên cứu, seminar/thỉnh giảng."
+                        },
+                        {
+                            "id": "basic_training_usage",
+                            "text": "Có kết quả được sử dụng trong đào tạo đại học/sau đại học không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "basic_training_usage"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "teaching_docs",
+                                    "label": "Số tài liệu giảng dạy chính thức"
+                                },
+                                {
+                                    "name": "theses",
+                                    "label": "Số luận văn/luận án sử dụng kết quả"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "basic_program_role",
+                            "text": "Có vai trò trong chương trình KH&CN/ĐMST không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "basic_program_role"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "intl_lead",
+                                    "label": "Số vai trò chủ nhiệm/điều phối CT quốc tế"
+                                },
+                                {
+                                    "name": "national_board",
+                                    "label": "Số vai trò BCN CT quốc gia"
+                                },
+                                {
+                                    "name": "intl_member",
+                                    "label": "Số vai trò thành viên chính CT quốc tế"
+                                },
+                                {
+                                    "name": "national_member",
+                                    "label": "Số vai trò thành viên CT quốc gia"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "applied": {
+            "name": "Nghiên cứu ứng dụng",
+            "groups": [
+                {
+                    "id": "DT1",
+                    "title": "Đt1 - Quá trình triển khai",
+                    "max": 20,
+                    "criteria": [
+                        {
+                            "id": "applied_new_direction",
+                            "text": "Có định hướng nghiên cứu mới gắn với công nghệ chiến lược/mới nổi không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 10
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi quyết định/văn bản/hướng nghiên cứu liên quan."
+                        },
+                        {
+                            "id": "applied_collaboration",
+                            "text": "Có hợp tác nghiên cứu phù hợp, có triển khai và vai trò rõ ràng không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 5
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi đối tác, nội dung triển khai, vai trò tổ chức."
+                        },
+                        {
+                            "id": "applied_integrity",
+                            "text": "Có cơ chế bảo đảm liêm chính khoa học và đạo đức nghiên cứu không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "integrity_penalty"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "retracted",
+                                    "label": "Số công bố bị thu hồi trong 3 năm"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "DT2",
+                    "title": "Đt2 - Kết quả đầu ra",
+                    "max": 30,
+                    "criteria": [
+                        {
+                            "id": "applied_publication",
+                            "text": "Có công bố khoa học đạt ngưỡng không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "weighted_range",
+                                "weights": {
+                                    "q12": 2.5,
+                                    "q34": 1.5,
+                                    "conf": 1,
+                                    "v1": 1.5,
+                                    "v2": 1,
+                                    "v3": 0.7,
+                                    "v4": 0.5
+                                },
+                                "ranges": [
+                                    {
+                                        "min": 2,
+                                        "max": 6,
+                                        "score_min": 2,
+                                        "score_mid": 3,
+                                        "score_max": 4
+                                    },
+                                    {
+                                        "min": 6,
+                                        "max": 10,
+                                        "score_min": 4,
+                                        "score_mid": 5,
+                                        "score_max": 6
+                                    },
+                                    {
+                                        "min": 10,
+                                        "max": 14,
+                                        "score_min": 6,
+                                        "score_mid": 7,
+                                        "score_max": 8
+                                    },
+                                    {
+                                        "min": 14,
+                                        "max": null,
+                                        "score": 10
+                                    }
+                                ]
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "q12",
+                                    "label": "Số bài Q1/Q2"
+                                },
+                                {
+                                    "name": "q34",
+                                    "label": "Số bài Q3/Q4"
+                                },
+                                {
+                                    "name": "conf",
+                                    "label": "Hội nghị quốc tế"
+                                },
+                                {
+                                    "name": "v1",
+                                    "label": "Tạp chí VN loại 1"
+                                },
+                                {
+                                    "name": "v2",
+                                    "label": "Tạp chí VN loại 2"
+                                },
+                                {
+                                    "name": "v3",
+                                    "label": "Tạp chí VN loại 3"
+                                },
+                                {
+                                    "name": "v4",
+                                    "label": "Tạp chí VN loại 4"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "applied_ip",
+                            "text": "Có sáng chế/giải pháp hữu ích/đơn đăng ký được chấp nhận không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "ip_applied"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "patent",
+                                    "label": "Bằng sáng chế"
+                                },
+                                {
+                                    "name": "utility",
+                                    "label": "Giải pháp hữu ích/IC/giống"
+                                },
+                                {
+                                    "name": "application",
+                                    "label": "Đơn được chấp nhận"
+                                },
+                                {
+                                    "name": "intl_bonus",
+                                    "label": "Bằng quốc tế? nhập 1 nếu có"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "applied_prototype",
+                            "text": "Có mô hình thử nghiệm/thông số kỹ thuật đạt ngưỡng không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "capped_weighted_sum",
+                                "weights": {
+                                    "lab": 2,
+                                    "simulation": 3,
+                                    "pilot": 4
+                                },
+                                "cap": 10
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "lab",
+                                    "label": "Mô hình lab"
+                                },
+                                {
+                                    "name": "simulation",
+                                    "label": "Mẫu mô phỏng sản xuất"
+                                },
+                                {
+                                    "name": "pilot",
+                                    "label": "Pilot/bán sản xuất"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "DT3",
+                    "title": "Đt3 - Hiệu quả sử dụng nguồn lực",
+                    "max": 25,
+                    "criteria": [
+                        {
+                            "id": "applied_ip_fte",
+                            "text": "Có năng suất sở hữu trí tuệ/FTE đạt ngưỡng không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "ip_fte_range"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "ip_score",
+                                    "label": "Tổng điểm IP"
+                                },
+                                {
+                                    "name": "fte",
+                                    "label": "FTE"
+                                },
+                                {
+                                    "name": "benchmark",
+                                    "label": "Trung bình quốc gia"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "applied_cost_output",
+                            "text": "Có chi phí trung bình cho mỗi kết quả công nghệ/IP đạt ngưỡng không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "cost_output_applied"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "cost",
+                                    "label": "Chi phí trung bình/đầu ra, triệu VNĐ"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "applied_external_revenue",
+                            "text": "Có tỷ lệ doanh thu bên ngoài trên tổng doanh thu đạt ngưỡng không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "external_revenue_ratio"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "external",
+                                    "label": "Doanh thu bên ngoài"
+                                },
+                                {
+                                    "name": "total",
+                                    "label": "Tổng doanh thu"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "DT4",
+                    "title": "Đt4 - Tác động",
+                    "max": 25,
+                    "criteria": [
+                        {
+                            "id": "applied_adoption",
+                            "text": "Có kết quả nghiên cứu được tiếp nhận/sử dụng/phát triển tiếp không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 10
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi đơn vị tiếp nhận, hình thức sử dụng/phát triển tiếp."
+                        },
+                        {
+                            "id": "applied_standard",
+                            "text": "Có kết quả được dùng làm căn cứ ban hành tiêu chuẩn/định mức kỹ thuật ngành không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 10
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi tiêu chuẩn, định mức, quyết định/thông tư liên quan."
+                        },
+                        {
+                            "id": "applied_linkage",
+                            "text": "Có mô hình/báo cáo/sản phẩm thúc đẩy liên kết viện-trường-doanh nghiệp không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "capped_weighted_sum",
+                                "weights": {
+                                    "model": 1,
+                                    "report": 1,
+                                    "product": 1
+                                },
+                                "cap": 5
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "model",
+                                    "label": "Số mô hình liên kết"
+                                },
+                                {
+                                    "name": "report",
+                                    "label": "Số báo cáo lan truyền tri thức"
+                                },
+                                {
+                                    "name": "product",
+                                    "label": "Số sản phẩm/hệ sinh thái"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "tech": {
+            "name": "Phát triển công nghệ",
+            "groups": [
+                {
+                    "id": "DT1",
+                    "title": "Đt1 - Quá trình triển khai",
+                    "max": 20,
+                    "criteria": [
+                        {
+                            "id": "tech_design_verify",
+                            "text": "Có thiết kế, tích hợp, kiểm chứng và quy trình kiểm soát kỹ thuật không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 5
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi quy trình kiểm soát, nhân lực, hạ tầng, tỷ lệ nhiệm vụ tuân thủ."
+                        },
+                        {
+                            "id": "tech_localization",
+                            "text": "Có mức độ nội địa hóa/làm chủ công nghệ đạt ngưỡng không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "tech_localization"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "p_lc",
+                                    "label": "P_LC (%)"
+                                },
+                                {
+                                    "name": "p_ndh",
+                                    "label": "P_NĐH (%)"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "tech_enterprise_link",
+                            "text": "Có liên kết sản xuất thử nghiệm/sản xuất với doanh nghiệp không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 5
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi hợp đồng/MOU, doanh nghiệp, bàn giao kỹ thuật, đo kiểm."
+                        }
+                    ]
+                },
+                {
+                    "id": "DT2",
+                    "title": "Đt2 - Kết quả đầu ra",
+                    "max": 30,
+                    "criteria": [
+                        {
+                            "id": "tech_ip_commercialized",
+                            "text": "Có IP được thương mại hóa/chào bán/MOU sản xuất thử không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "capped_weighted_sum",
+                                "weights": {
+                                    "a": 5,
+                                    "b": 2,
+                                    "c": 1
+                                },
+                                "cap": 10
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "a",
+                                    "label": "Số loại A"
+                                },
+                                {
+                                    "name": "b",
+                                    "label": "Số loại B"
+                                },
+                                {
+                                    "name": "c",
+                                    "label": "Số loại C"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "tech_product_certified",
+                            "text": "Có sản phẩm thử nghiệm đạt tiêu chuẩn kỹ thuật/kiểm định độc lập không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "capped_weighted_sum",
+                                "weights": {
+                                    "a": 8,
+                                    "b": 6,
+                                    "c": 3,
+                                    "d": 1
+                                },
+                                "cap": 10
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "a",
+                                    "label": "Số loại A"
+                                },
+                                {
+                                    "name": "b",
+                                    "label": "Số loại B"
+                                },
+                                {
+                                    "name": "c",
+                                    "label": "Số loại C"
+                                },
+                                {
+                                    "name": "d",
+                                    "label": "Số loại D"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "tech_process_transfer",
+                            "text": "Có quy trình công nghệ được hoàn thiện và chuyển giao không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "capped_weighted_sum",
+                                "weights": {
+                                    "level5": 5,
+                                    "level4": 4,
+                                    "level3": 3,
+                                    "level2": 2,
+                                    "level1": 1
+                                },
+                                "cap": 10
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "level5",
+                                    "label": "Số quy trình mức 5"
+                                },
+                                {
+                                    "name": "level4",
+                                    "label": "Số quy trình mức 4"
+                                },
+                                {
+                                    "name": "level3",
+                                    "label": "Số quy trình mức 3"
+                                },
+                                {
+                                    "name": "level2",
+                                    "label": "Số quy trình mức 2"
+                                },
+                                {
+                                    "name": "level1",
+                                    "label": "Số quy trình mức 1"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "DT3",
+                    "title": "Đt3 - Hiệu quả sử dụng nguồn lực",
+                    "max": 25,
+                    "criteria": [
+                        {
+                            "id": "tech_commercialization_rate",
+                            "text": "Có tỷ lệ thương mại hóa của kết quả đầu ra đạt ngưỡng không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "tech_commercialization_rate"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "commercialized",
+                                    "label": "Số kết quả đã thương mại hóa"
+                                },
+                                {
+                                    "name": "total",
+                                    "label": "Tổng kết quả đầu ra"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "tech_roi",
+                            "text": "Có tỷ lệ doanh thu/chi phí R&D đạt ngưỡng không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "tech_roi"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "revenue",
+                                    "label": "Doanh thu từ R&D"
+                                },
+                                {
+                                    "name": "cost",
+                                    "label": "Chi phí R&D"
+                                },
+                                {
+                                    "name": "years",
+                                    "label": "Chu kỳ: nhập 3 hoặc 5"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "tech_spinoff",
+                            "text": "Có doanh nghiệp khởi nghiệp sáng tạo/spin-off hình thành trong 3 năm gần nhất không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "capped_weighted_sum",
+                                "weights": {
+                                    "early": 4,
+                                    "profitable": 5
+                                },
+                                "cap": 5
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "early",
+                                    "label": "Số spin-off mới"
+                                },
+                                {
+                                    "name": "profitable",
+                                    "label": "Số spin-off có đơn hàng/có lãi"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "DT4",
+                    "title": "Đt4 - Tác động",
+                    "max": 25,
+                    "criteria": [
+                        {
+                            "id": "tech_enterprise_capacity",
+                            "text": "Có nâng cao năng lực công nghệ cho doanh nghiệp không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "capped_weighted_sum",
+                                "weights": {
+                                    "consulting": 4,
+                                    "training": 3,
+                                    "testing": 2,
+                                    "standard": 1
+                                },
+                                "cap": 10
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "consulting",
+                                    "label": "Số DN được tư vấn cải tiến"
+                                },
+                                {
+                                    "name": "training",
+                                    "label": "Số DN được đào tạo nhân lực"
+                                },
+                                {
+                                    "name": "testing",
+                                    "label": "Số DN được hỗ trợ thử nghiệm"
+                                },
+                                {
+                                    "name": "standard",
+                                    "label": "Số DN được xây dựng tiêu chuẩn"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "tech_social_environment",
+                            "text": "Có tác động xã hội/môi trường được chứng minh không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "tech_social_environment"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "social_breakthrough",
+                                    "label": "Số tác động xã hội đột phá"
+                                },
+                                {
+                                    "name": "social_value",
+                                    "label": "Số tác động xã hội có giá trị"
+                                },
+                                {
+                                    "name": "social_basic",
+                                    "label": "Số tác động xã hội cơ bản"
+                                },
+                                {
+                                    "name": "env_breakthrough",
+                                    "label": "Số tác động môi trường đột phá"
+                                },
+                                {
+                                    "name": "env_value",
+                                    "label": "Số tác động môi trường có giá trị"
+                                },
+                                {
+                                    "name": "env_basic",
+                                    "label": "Số tác động môi trường cơ bản"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "tech_field_capacity",
+                            "text": "Có tác động nâng cao năng lực công nghệ của lĩnh vực nghiên cứu không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "capped_weighted_sum",
+                                "weights": {
+                                    "replace_tech": 3,
+                                    "replace_import": 1,
+                                    "diffusion": 1
+                                },
+                                "cap": 5
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "replace_tech",
+                                    "label": "Số tác động thay thế công nghệ"
+                                },
+                                {
+                                    "name": "replace_import",
+                                    "label": "Số tác động thay thế sản phẩm nhập khẩu"
+                                },
+                                {
+                                    "name": "diffusion",
+                                    "label": "Số tác động ứng dụng lan tỏa"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "policy": {
+            "name": "Nghiên cứu chính sách KT-XH",
+            "groups": [
+                {
+                    "id": "DT1",
+                    "title": "Đt1 - Quá trình triển khai",
+                    "max": 20,
+                    "criteria": [
+                        {
+                            "id": "policy_new_direction",
+                            "text": "Có định hướng nghiên cứu rõ ràng, phù hợp và thích ứng với nhu cầu xã hội không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 10
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi quyết định/văn bản/hướng nghiên cứu liên quan."
+                        },
+                        {
+                            "id": "policy_collaboration",
+                            "text": "Có hợp tác nghiên cứu phù hợp, có triển khai và vai trò rõ ràng không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "fixed",
+                                "score": 5
+                            },
+                            "display_mode": "qualitative",
+                            "note_placeholder": "Ghi đối tác, nội dung triển khai, vai trò tổ chức."
+                        },
+                        {
+                            "id": "policy_integrity",
+                            "text": "Có cơ chế bảo đảm liêm chính khoa học và đạo đức nghiên cứu không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "integrity_penalty"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "retracted",
+                                    "label": "Số công bố bị thu hồi trong 3 năm"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "DT2",
+                    "title": "Đt2 - Kết quả đầu ra",
+                    "max": 30,
+                    "criteria": [
+                        {
+                            "id": "policy_publication",
+                            "text": "Có công bố khoa học đạt ngưỡng không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "weighted_range",
+                                "weights": {
+                                    "q12": 2.5,
+                                    "q34": 1.5,
+                                    "conf": 1,
+                                    "v1": 1.5,
+                                    "v2": 1,
+                                    "v3": 0.7,
+                                    "v4": 0.5
+                                },
+                                "ranges": [
+                                    {
+                                        "min": 2,
+                                        "max": 6,
+                                        "score_min": 2,
+                                        "score_mid": 3,
+                                        "score_max": 4
+                                    },
+                                    {
+                                        "min": 6,
+                                        "max": 10,
+                                        "score_min": 4,
+                                        "score_mid": 5,
+                                        "score_max": 6
+                                    },
+                                    {
+                                        "min": 10,
+                                        "max": 14,
+                                        "score_min": 6,
+                                        "score_mid": 7,
+                                        "score_max": 8
+                                    },
+                                    {
+                                        "min": 14,
+                                        "max": null,
+                                        "score": 10
+                                    }
+                                ]
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "q12",
+                                    "label": "Số bài Q1/Q2"
+                                },
+                                {
+                                    "name": "q34",
+                                    "label": "Số bài Q3/Q4"
+                                },
+                                {
+                                    "name": "conf",
+                                    "label": "Hội nghị quốc tế"
+                                },
+                                {
+                                    "name": "v1",
+                                    "label": "Tạp chí VN loại 1"
+                                },
+                                {
+                                    "name": "v2",
+                                    "label": "Tạp chí VN loại 2"
+                                },
+                                {
+                                    "name": "v3",
+                                    "label": "Tạp chí VN loại 3"
+                                },
+                                {
+                                    "name": "v4",
+                                    "label": "Tạp chí VN loại 4"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "policy_scientific_publication",
+                            "text": "Có ấn phẩm khoa học đạt ngưỡng không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "domestic_publication"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "sqt",
+                                    "label": "Sách quốc tế"
+                                },
+                                {
+                                    "name": "str",
+                                    "label": "Sách/chuyên khảo trong nước"
+                                },
+                                {
+                                    "name": "bc",
+                                    "label": "Báo cáo hội nghị"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "policy_recommendation",
+                            "text": "Có kết quả nghiên cứu được đề xuất/kiến nghị trong hoạch định chiến lược/chính sách không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "policy_recommendation"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "local_1_2",
+                                    "label": "Số đề xuất cấp địa phương đã gửi/tiếp nhận"
+                                },
+                                {
+                                    "name": "local_or_ministry_3",
+                                    "label": "Số đề xuất cấp địa phương/Bộ có phản hồi"
+                                },
+                                {
+                                    "name": "sector_3",
+                                    "label": "Số đề xuất cấp ngành/liên ngành được xem xét"
+                                },
+                                {
+                                    "name": "official_5",
+                                    "label": "Số đề xuất gửi chính thức tới cơ quan có thẩm quyền"
+                                },
+                                {
+                                    "name": "written_response_2",
+                                    "label": "Số đề xuất được phản hồi/công nhận/trích dẫn/đưa vào xây dựng chính sách"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "DT3",
+                    "title": "Đt3 - Hiệu quả sử dụng nguồn lực",
+                    "max": 25,
+                    "criteria": [
+                        {
+                            "id": "policy_applied",
+                            "text": "Có kết quả nghiên cứu được áp dụng trong hoạch định chiến lược/chính sách/thể chế hóa không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "policy_applied"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "referenced",
+                                    "label": "Số KQNC được tham khảo/sử dụng hạn chế"
+                                },
+                                {
+                                    "name": "partial_modify",
+                                    "label": "Số KQNC sửa đổi một phần chính sách"
+                                },
+                                {
+                                    "name": "multiple_modify",
+                                    "label": "Số KQNC sửa đổi từ 2 chính sách trở lên"
+                                },
+                                {
+                                    "name": "replace",
+                                    "label": "Số KQNC thay thế chính sách cũ"
+                                },
+                                {
+                                    "name": "new_build",
+                                    "label": "Số KQNC xây dựng mới chính sách/văn bản"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "policy_advisory",
+                            "text": "Có khả năng tư vấn, phản biện chính sách được minh chứng không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "policy_advisory"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "low",
+                                    "label": "Số hoạt động cấp thấp"
+                                },
+                                {
+                                    "name": "local",
+                                    "label": "Số hoạt động cấp địa phương/tổ chức trung gian"
+                                },
+                                {
+                                    "name": "dialogue",
+                                    "label": "Số đối thoại chính sách cấp cao"
+                                },
+                                {
+                                    "name": "ministry",
+                                    "label": "Số lần hội đồng cấp Bộ/ngành"
+                                },
+                                {
+                                    "name": "national",
+                                    "label": "Số lần hội đồng cấp Quốc gia"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "policy_research_community",
+                            "text": "Có ảnh hưởng trong cộng đồng nghiên cứu không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "policy_community"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "board",
+                                    "label": "Số vai trò BCN/điều phối hội đồng/chương trình"
+                                },
+                                {
+                                    "name": "academic_policy",
+                                    "label": "Số lần tham gia xây dựng chính sách học thuật chuyên sâu"
+                                },
+                                {
+                                    "name": "intl_member",
+                                    "label": "Số vai trò thành viên chính chương trình quốc tế"
+                                },
+                                {
+                                    "name": "intl_lead",
+                                    "label": "Số vai trò chủ nhiệm/điều phối chương trình quốc tế"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "DT4",
+                    "title": "Đt4 - Tác động",
+                    "max": 25,
+                    "criteria": [
+                        {
+                            "id": "policy_impact_ktxhmt",
+                            "text": "Có tác động kinh tế - xã hội - môi trường không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "policy_impact_ktxhmt"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "kt3",
+                                    "label": "Số tác động kinh tế mức 3"
+                                },
+                                {
+                                    "name": "kt2",
+                                    "label": "Số tác động kinh tế mức 2"
+                                },
+                                {
+                                    "name": "kt1",
+                                    "label": "Số tác động kinh tế mức 1"
+                                },
+                                {
+                                    "name": "xh3",
+                                    "label": "Số tác động xã hội mức 3"
+                                },
+                                {
+                                    "name": "xh2",
+                                    "label": "Số tác động xã hội mức 2"
+                                },
+                                {
+                                    "name": "xh1",
+                                    "label": "Số tác động xã hội mức 1"
+                                },
+                                {
+                                    "name": "mt3",
+                                    "label": "Số tác động môi trường mức 3"
+                                },
+                                {
+                                    "name": "mt2",
+                                    "label": "Số tác động môi trường mức 2"
+                                },
+                                {
+                                    "name": "mt1",
+                                    "label": "Số tác động môi trường mức 1"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "policy_behavior_change",
+                            "text": "Có tác động thay đổi nhận thức/thái độ/hành vi xã hội không?",
+                            "max": 10,
+                            "scoring": {
+                                "type": "policy_behavior_change"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "level",
+                                    "label": "Mức tác động: nhập 1, 2 hoặc 3"
+                                }
+                            ]
+                        },
+                        {
+                            "id": "policy_diffusion",
+                            "text": "Có mức độ lan tỏa chính sách ra địa phương/ngành không?",
+                            "max": 5,
+                            "scoring": {
+                                "type": "policy_diffusion"
+                            },
+                            "display_mode": "quantitative",
+                            "inputs": [
+                                {
+                                    "name": "level",
+                                    "label": "Mức lan tỏa: nhập 1 hoặc 2"
+                                },
+                                {
+                                    "name": "ministry_reports",
+                                    "label": "Số báo cáo cấp Bộ/ngành"
+                                },
+                                {
+                                    "name": "local_reports",
+                                    "label": "Số báo cáo cấp địa phương"
+                                },
+                                {
+                                    "name": "adoption_rate",
+                                    "label": "Tỷ lệ khuyến nghị được áp dụng (%)"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,109 @@
+body {
+    font-family: Arial, sans-serif;
+    max-width: 1200px;
+    margin: auto;
+    padding: 24px;
+    background: #f4f6f8;
+    color: #222
+}
+
+h1 {
+    text-align: center
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px;
+    margin-top: 4px;
+    border: 1px solid #ccc;
+    border-radius: 7px;
+    font-size: 15px
+}
+
+textarea {
+    min-height: 72px
+}
+
+button {
+    padding: 12px 20px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 16px;
+    font-weight: bold
+}
+
+button:hover {
+    background: #1d4ed8
+}
+
+#function-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin: 16px 0
+}
+
+#function-checkboxes label {
+    background: white;
+    padding: 13px;
+    border-radius: 9px;
+    border: 1px solid #ddd
+}
+
+.function-card {
+    background: white;
+    padding: 22px;
+    margin: 24px 0;
+    border-radius: 14px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, .08)
+}
+
+.group-block {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    padding: 16px;
+    margin: 16px 0;
+    border-radius: 12px
+}
+
+.question-row {
+    background: white;
+    border: 1px solid #ddd;
+    padding: 14px;
+    margin: 12px 0;
+    border-radius: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    align-items: start
+}
+
+.q-main small {
+    display: block;
+    color: #666;
+    margin-top: 6px
+}
+
+.weight-box {
+    background: #eef2ff;
+    padding: 14px;
+    border-radius: 10px;
+    margin-bottom: 16px
+}
+
+a {
+    color: #2563eb;
+    font-weight: bold
+}
+
+@media(max-width:700px) {
+    #function-checkboxes {
+        grid-template-columns: 1fr
+    }
+}
