@@ -446,8 +446,16 @@ function uploadEvidenceFiles($funcKey, $questionId)
     if (!isset($_FILES[$key]))
         return "";
 
-    if (!is_dir("uploads"))
-        mkdir("uploads", 0777, true);
+    if (!is_dir("uploads")) {
+        if (!mkdir("uploads", 0777, true)) {
+            return "[Không thể tạo thư mục uploads]";
+        }
+    }
+
+    // Kiểm tra quyền ghi
+    if (!is_writable("uploads")) {
+        return "[Thư mục uploads không có quyền ghi]";
+    }
 
     foreach ($_FILES[$key]['name'] as $idx => $name) {
         if (!$name)
@@ -467,20 +475,34 @@ function uploadEvidenceFiles($funcKey, $questionId)
 
 function saveToExcel($organization, $results, $totalE, $rank)
 {
-    if (!is_dir("results"))
-        mkdir("results", 0777, true);
+    if (!is_dir("results")) {
+        if (!mkdir("results", 0777, true)) {
+            return ["error" => "Không thể tạo thư mục 'results'. Vui lòng kiểm tra quyền truy cập của thư mục."];
+        }
+    }
 
-    $file = "results/results.tsv";
-    $isNew = !file_exists($file);
-    $fp = fopen($file, "a");
-
-    if ($isNew) {
-        fwrite($fp, "\xEF\xBB\xBF");
-        fwrite($fp, "Thời gian\tTổ chức\tChức năng\tTrọng số\tĐt1\tĐt2\tĐt3\tĐt4\tĐT\tĐiểm quy đổi\tTổng E\tXếp loại\tNhóm\tCâu hỏi\tCó/Không\tĐiểm câu hỏi\tChú thích\tMinh chứng\n");
+    // Kiểm tra quyền ghi cho thư mục
+    if (!is_writable("results")) {
+        return ["error" => "Thư mục 'results' không có quyền ghi. Vui lòng liên hệ quản trị viên để cập nhật quyền truy cập."];
     }
 
     $time = date("Y-m-d H:i:s");
+    $timestamp = date("Ymd_His");
+    $orgSafe = preg_replace('/[^a-zA-Z0-9._-]/', '_', $organization);
+    
+    // Tạo file riêng cho người dùng tải
+    $downloadFile = "results/" . $timestamp . "_" . $orgSafe . ".tsv";
+    $fpDownload = fopen($downloadFile, "w");
+    
+    if (!$fpDownload) {
+        return ["error" => "Không thể tạo file kết quả. Vui lòng kiểm tra quyền truy cập."];
+    }
 
+    // Ghi header với BOM cho Excel
+    fwrite($fpDownload, "\xEF\xBB\xBF");
+    fwrite($fpDownload, "Thời gian\tTổ chức\tChức năng\tTrọng số\tĐt1\tĐt2\tĐt3\tĐt4\tĐT\tĐiểm quy đổi\tTổng E\tXếp loại\tNhóm\tCâu hỏi\tCó/Không\tĐiểm câu hỏi\tChú thích\tMinh chứng\n");
+
+    // Ghi dữ liệu vào file tải
     foreach ($results as $r) {
         foreach ($r['details'] as $d) {
             $row = [
@@ -504,11 +526,54 @@ function saveToExcel($organization, $results, $totalE, $rank)
                 str_replace(["\t", "\n", "\r"], " ", $d['evidence'])
             ];
 
-            fwrite($fp, implode("\t", $row) . "\n");
+            fwrite($fpDownload, implode("\t", $row) . "\n");
         }
     }
 
-    fclose($fp);
+    fclose($fpDownload);
+
+    // Append vào file tổng hợp results.tsv (cho quản trị viên)
+    $summaryFile = "results/results.tsv";
+    $isNew = !file_exists($summaryFile);
+    $fpSummary = fopen($summaryFile, "a");
+
+    if ($fpSummary) {
+        if ($isNew) {
+            fwrite($fpSummary, "\xEF\xBB\xBF");
+            fwrite($fpSummary, "Thời gian\tTổ chức\tChức năng\tTrọng số\tĐt1\tĐt2\tĐt3\tĐt4\tĐT\tĐiểm quy đổi\tTổng E\tXếp loại\tNhóm\tCâu hỏi\tCó/Không\tĐiểm câu hỏi\tChú thích\tMinh chứng\n");
+        }
+
+        foreach ($results as $r) {
+            foreach ($r['details'] as $d) {
+                $row = [
+                    $time,
+                    $organization,
+                    $r['name'],
+                    $r['weight'] * 100 . "%",
+                    $r['dt1'],
+                    $r['dt2'],
+                    $r['dt3'],
+                    $r['dt4'],
+                    $r['dt'],
+                    round($r['weighted'], 2),
+                    round($totalE, 2),
+                    $rank,
+                    $d['group'],
+                    $d['question'],
+                    $d['yes'] === "1" ? "Có" : "Không",
+                    $d['score'],
+                    str_replace(["\t", "\n", "\r"], " ", $d['note']),
+                    str_replace(["\t", "\n", "\r"], " ", $d['evidence'])
+                ];
+
+                fwrite($fpSummary, implode("\t", $row) . "\n");
+            }
+        }
+
+        fclose($fpSummary);
+    }
+
+    return ["success" => true, "file" => $downloadFile];
 }
 
 $criteria = json_decode(file_get_contents("criteria.json"), true);
@@ -585,7 +650,16 @@ elseif ($totalE >= 40)
 else
     $rank = "D - Kém";
 
-saveToExcel($organization, $results, $totalE, $rank);
+$saveResult = saveToExcel($organization, $results, $totalE, $rank);
+
+// Kiểm tra có lỗi khi lưu không
+if (is_array($saveResult) && isset($saveResult['error'])) {
+    $errorMessage = $saveResult['error'];
+    $downloadFile = null;
+} else {
+    $errorMessage = null;
+    $downloadFile = $saveResult['file'] ?? null;
+}
 ?>
 
 <!DOCTYPE html>
@@ -598,9 +672,28 @@ saveToExcel($organization, $results, $totalE, $rank);
 </head>
 
 <body>
-    <h1>Kết quả đánh giá</h1>
+    <div class="container">
+        <h1>Kết quả đánh giá</h1>
 
-    <h2>Người đánh giá: <?= htmlspecialchars($organization) ?></h2>
+        <?php if ($errorMessage): ?>
+            <div class="error-message" style="background-color: #f8d7da; color: #721c24; padding: 15px; border: 1px solid #f5c6cb; border-radius: 4px; margin-bottom: 20px;">
+                <strong>⚠️ Lỗi:</strong> <?= htmlspecialchars($errorMessage) ?>
+                <p style="margin-top: 10px; font-size: 0.9em;">Vui lòng liên hệ quản trị viên hệ thống để xử lý vấn đề này.</p>
+            </div>
+        <?php else: ?>
+            <div class="success-message" style="background-color: #d4edda; color: #155724; padding: 15px; border: 1px solid #c3e6cb; border-radius: 4px; margin-bottom: 20px;">
+                <strong>✅ Thành công!</strong> Kết quả đã được lưu. Bạn có thể tải file kết quả dưới đây.
+                <?php if ($downloadFile): ?>
+                    <p style="margin-top: 10px;">
+                        <a href="<?= htmlspecialchars($downloadFile) ?>" download style="display: inline-block; margin-top: 10px; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                            📥 Tải file kết quả
+                        </a>
+                    </p>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <h2>Người đánh giá: <?= htmlspecialchars($organization) ?></h2>
 
     <?php foreach ($results as $r): ?>
         <div class="function-card">
@@ -622,11 +715,12 @@ saveToExcel($organization, $results, $totalE, $rank);
     <h2>Tổng điểm E: <?= round($totalE, 2) ?></h2>
     <h2>Xếp loại: <?= $rank ?></h2>
 
-    <p>
-        <a href="results/results.tsv">Tải file Excel kết quả</a>
-    </p>
-
-    <a href="index.php">Quay lại</a>
+    <div style="margin-top: 30px; text-align: center;">
+        <a href="index.php" style="display: inline-block; padding: 10px 20px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
+            ← Quay lại
+        </a>
+    </div>
+    </div>
 </body>
 
 </html>
