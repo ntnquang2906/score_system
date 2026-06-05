@@ -5,9 +5,30 @@
     <meta charset="UTF-8">
     <title>Hệ thống đánh giá KH&CN</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .admin-login-link {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #667eea;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 13px;
+            transition: background-color 0.3s;
+        }
+        .admin-login-link:hover {
+            background-color: #764ba2;
+        }
+        body {
+            position: relative;
+        }
+    </style>
 </head>
 
 <body>
+    <a href="login.php" class="admin-login-link">🔐 Lãnh đạo / Quản trị</a>
     <h1>Hệ thống đánh giá tổ chức KH&CN</h1>
     <form action="process.php" method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
         <label>Tên người đánh giá:</label>
