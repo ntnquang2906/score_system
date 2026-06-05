@@ -26,31 +26,23 @@ if (isset($_GET['download'])) {
     }
 }
 
-// Lấy danh sách file trong thư mục results
+// Định nghĩa file tổng hợp
+$summaryFile = "results/results.tsv";
+
+// Lấy danh sách file trong thư mục results (chỉ hiển thị file results.tsv)
 $resultsDir = "results/";
 $files = [];
 
-if (is_dir($resultsDir)) {
-    $items = array_diff(scandir($resultsDir), array('.', '..'));
-    foreach ($items as $item) {
-        $filepath = $resultsDir . $item;
-        if (is_file($filepath)) {
-            $files[] = [
-                'name' => $item,
-                'size' => filesize($filepath),
-                'time' => filemtime($filepath),
-                'modified' => date('d/m/Y H:i:s', filemtime($filepath))
-            ];
-        }
-    }
-    // Sắp xếp theo thời gian, file mới nhất trước
-    usort($files, function ($a, $b) {
-        return $b['time'] - $a['time'];
-    });
+if (is_dir($resultsDir) && file_exists($summaryFile)) {
+    $files[] = [
+        'name' => 'results.tsv',
+        'size' => filesize($summaryFile),
+        'time' => filemtime($summaryFile),
+        'modified' => date('d/m/Y H:i:s', filemtime($summaryFile))
+    ];
 }
 
-// Lấy nội dung file tổng hợp results.tsv để hiển thị preview
-$summaryFile = "results/results.tsv";
+// Lấy nội dung file tổng hợp results.tsv để tính toán
 $summaryData = [];
 $summaryRows = 0;
 $uniqueOrganizations = 0;
