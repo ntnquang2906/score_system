@@ -53,6 +53,7 @@ if (is_dir($resultsDir)) {
 $summaryFile = "results/results.tsv";
 $summaryData = [];
 $summaryRows = 0;
+$uniqueOrganizations = 0;
 
 if (file_exists($summaryFile)) {
     $content = file_get_contents($summaryFile);
@@ -63,6 +64,19 @@ if (file_exists($summaryFile)) {
     
     $lines = explode("\n", $content);
     $summaryRows = count($lines) - 1; // Trừ header
+    
+    // Đếm số lượng đơn vị duy nhất (cột Tổ chức - cột thứ 2, index 1)
+    $organizations = [];
+    for ($i = 1; $i < count($lines); $i++) {
+        if (!empty(trim($lines[$i]))) {
+            $parts = explode("\t", $lines[$i]);
+            if (isset($parts[1]) && !empty(trim($parts[1]))) {
+                $org = trim($parts[1]);
+                $organizations[$org] = true;
+            }
+        }
+    }
+    $uniqueOrganizations = count($organizations);
     
     // Hiển thị 10 dòng gần đây nhất
     $displayLines = array_slice($lines, max(0, count($lines) - 11), 11);
@@ -277,8 +291,8 @@ if (file_exists($summaryFile)) {
             <h2>📈 Thông tin tổng hợp</h2>
             <div class="stats">
                 <div class="stat-box">
-                    <div class="label">Tổng số bản ghi</div>
-                    <div class="value"><?php echo $summaryRows; ?></div>
+                    <div class="label">Tổng số đơn vị đã điền</div>
+                    <div class="value"><?php echo $uniqueOrganizations; ?></div>
                 </div>
                 <div class="stat-box">
                     <div class="label">Tổng số file riêng lẻ</div>
@@ -323,41 +337,6 @@ if (file_exists($summaryFile)) {
                         <?php endforeach; ?>
                     </tbody>
                 </table>
-            <?php endif; ?>
-        </div>
-
-        <div class="section">
-            <h2>📋 Preview - 10 bản ghi gần đây nhất từ tệp tổng hợp</h2>
-            <?php if (!file_exists($summaryFile)): ?>
-                <div class="empty-message">Chưa có dữ liệu tổng hợp.</div>
-            <?php else: ?>
-                <div class="summary-preview">
-                    Tệp: <strong><?php echo htmlspecialchars($summaryFile); ?></strong> | Cập nhật: <strong><?php echo date('d/m/Y H:i:s', filemtime($summaryFile)); ?></strong>
-                </div>
-                <div class="data-preview">
-                    <table>
-                        <thead>
-                            <?php if (!empty($summaryData)): ?>
-                                <tr>
-                                    <?php foreach ($summaryData[0] as $header): ?>
-                                        <th><?php echo htmlspecialchars($header); ?></th>
-                                    <?php endforeach; ?>
-                                </tr>
-                            <?php endif; ?>
-                        </thead>
-                        <tbody>
-                            <?php 
-                            foreach (array_slice($summaryData, 1) as $row): 
-                            ?>
-                                <tr>
-                                    <?php foreach ($row as $cell): ?>
-                                        <td><?php echo htmlspecialchars($cell); ?></td>
-                                    <?php endforeach; ?>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
             <?php endif; ?>
         </div>
     </div>

@@ -31,7 +31,7 @@
     <a href="login.php" class="admin-login-link">🔐 Lãnh đạo / Quản trị</a>
     <h1>Hệ thống đánh giá tổ chức KH&CN</h1>
     <form action="process.php" method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
-        <label>Tên người đánh giá:</label>
+        <label>Tên đơn vị đánh giá:</label>
         <input type="text" name="organization_name" required>
         <h3>Chọn chức năng:</h3>
         <div id="function-checkboxes">
