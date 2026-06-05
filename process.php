@@ -533,43 +533,87 @@ function saveToExcel($organization, $results, $totalE, $rank)
     fclose($fpDownload);
 
     // Append vào file tổng hợp results.tsv (cho quản trị viên)
+    // Chỉ lưu kết quả cuối cùng (mới nhất) của mỗi đơn vị
     $summaryFile = "results/results.tsv";
     $isNew = !file_exists($summaryFile);
-    $fpSummary = fopen($summaryFile, "a");
-
-    if ($fpSummary) {
-        if ($isNew) {
-            fwrite($fpSummary, "\xEF\xBB\xBF");
-            fwrite($fpSummary, "Thời gian\tTổ chức\tChức năng\tTrọng số\tĐt1\tĐt2\tĐt3\tĐt4\tĐT\tĐiểm quy đổi\tTổng E\tXếp loại\tNhóm\tCâu hỏi\tCó/Không\tĐiểm câu hỏi\tChú thích\tMinh chứng\n");
+    
+    // Đọc file hiện tại và lọc bỏ các dòng của tổ chức này
+    $existingLines = [];
+    $headerLine = "";
+    
+    if ($isNew) {
+        $headerLine = "Thời gian\tTổ chức\tChức năng\tTrọng số\tĐt1\tĐt2\tĐt3\tĐt4\tĐT\tĐiểm quy đổi\tTổng E\tXếp loại\tNhóm\tCâu hỏi\tCó/Không\tĐiểm câu hỏi\tChú thích\tMinh chứng";
+    } else {
+        $fileContent = file_get_contents($summaryFile);
+        // Loại bỏ BOM nếu có
+        if (substr($fileContent, 0, 3) === "\xEF\xBB\xBF") {
+            $fileContent = substr($fileContent, 3);
         }
-
-        foreach ($results as $r) {
-            foreach ($r['details'] as $d) {
-                $row = [
-                    $time,
-                    $organization,
-                    $r['name'],
-                    $r['weight'] * 100 . "%",
-                    $r['dt1'],
-                    $r['dt2'],
-                    $r['dt3'],
-                    $r['dt4'],
-                    $r['dt'],
-                    round($r['weighted'], 2),
-                    round($totalE, 2),
-                    $rank,
-                    $d['group'],
-                    $d['question'],
-                    $d['yes'] === "1" ? "Có" : "Không",
-                    $d['score'],
-                    str_replace(["\t", "\n", "\r"], " ", $d['note']),
-                    str_replace(["\t", "\n", "\r"], " ", $d['evidence'])
-                ];
-
-                fwrite($fpSummary, implode("\t", $row) . "\n");
+        $lines = explode("\n", $fileContent);
+        
+        if (!empty($lines)) {
+            $headerLine = array_shift($lines);
+        }
+        
+        // Lọc bỏ các dòng của tổ chức này
+        foreach ($lines as $line) {
+            if (trim($line) === "") continue;
+            $columns = explode("\t", $line);
+            if (isset($columns[1]) && $columns[1] !== $organization) {
+                $existingLines[] = $line;
             }
         }
-
+    }
+    
+    // Thêm dòng mới cho tổ chức này
+    $newLines = [];
+    foreach ($results as $r) {
+        foreach ($r['details'] as $d) {
+            $row = [
+                $time,
+                $organization,
+                $r['name'],
+                $r['weight'] * 100 . "%",
+                $r['dt1'],
+                $r['dt2'],
+                $r['dt3'],
+                $r['dt4'],
+                $r['dt'],
+                round($r['weighted'], 2),
+                round($totalE, 2),
+                $rank,
+                $d['group'],
+                $d['question'],
+                $d['yes'] === "1" ? "Có" : "Không",
+                $d['score'],
+                str_replace(["\t", "\n", "\r"], " ", $d['note']),
+                str_replace(["\t", "\n", "\r"], " ", $d['evidence'])
+            ];
+            $newLines[] = implode("\t", $row);
+        }
+    }
+    
+    // Ghi lại file với dữ liệu đã lọc
+    $fpSummary = fopen($summaryFile, "w");
+    if ($fpSummary) {
+        // Ghi BOM cho UTF-8
+        fwrite($fpSummary, "\xEF\xBB\xBF");
+        
+        // Ghi header
+        fwrite($fpSummary, $headerLine . "\n");
+        
+        // Ghi các dòng cũ (của các tổ chức khác)
+        foreach ($existingLines as $line) {
+            if (trim($line) !== "") {
+                fwrite($fpSummary, $line . "\n");
+            }
+        }
+        
+        // Ghi các dòng mới (của tổ chức hiện tại)
+        foreach ($newLines as $line) {
+            fwrite($fpSummary, $line . "\n");
+        }
+        
         fclose($fpSummary);
     }
 
