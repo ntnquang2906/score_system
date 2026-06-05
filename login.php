@@ -1,6 +1,9 @@
 <?php
 session_start();
 
+// Load danh sách tài khoản
+require_once 'credentials.php';
+
 // Nếu đã đăng nhập, chuyển hướng đến dashboard
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
     header("Location: dashboard.php");
@@ -13,8 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
     
-    // Kiểm tra tài khoản
-    if ($username === 'admin' && $password === 'dhqg2026') {
+    // Kiểm tra tài khoản trong danh sách
+    if (isset($accounts[$username]) && $accounts[$username] === $password) {
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['admin_username'] = $username;
         $_SESSION['login_time'] = time();
