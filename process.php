@@ -22,11 +22,11 @@ function midpointScore($value, $range)
 
     $mid = ((float) $range['min'] + (float) $range['max']) / 2;
 
-    if ($value < $mid)
-        return $range['score_min'];
+    if ($value < $mid) return $range['score_min'];
 
-    if (isEqualFloat($value, $mid))
+    if (isEqualFloat($value, $mid)) {
         return $range['score_mid'] ?? (($range['score_min'] + $range['score_max']) / 2);
+    }
 
     return $range['score_max'];
 }
@@ -38,11 +38,11 @@ function scoreByRanges($value, $ranges)
         $max = $r['max'];
 
         if ($max === null) {
-            if ($value >= $min)
-                return $r['score'] ?? $r['score_max'] ?? 0;
+            if ($value >= $min) return $r['score'] ?? $r['score_max'] ?? 0;
         } else {
-            if ($value >= $min && $value <= (float) $max)
+            if ($value >= $min && $value <= (float) $max) {
                 return midpointScore($value, $r);
+            }
         }
     }
 
@@ -51,8 +51,7 @@ function scoreByRanges($value, $ranges)
 
 function calculateQuestionScore($q, $answer)
 {
-    if (!isset($answer['yes']) || $answer['yes'] !== "1")
-        return 0;
+    if (!isset($answer['yes']) || $answer['yes'] !== "1") return 0;
 
     $scoring = $q['scoring'];
     $type = $scoring['type'];
@@ -66,12 +65,9 @@ function calculateQuestionScore($q, $answer)
             $r = getInput($answer, "retracted");
             $s = 5;
 
-            if ($r == 1)
-                $s -= 1;
-            elseif ($r == 2)
-                $s -= 2;
-            elseif ($r >= 3)
-                $s -= 3;
+            if ($r == 1) $s -= 1;
+            elseif ($r == 2) $s -= 2;
+            elseif ($r >= 3) $s -= 3;
 
             return clampScore($s, $max);
 
@@ -87,41 +83,28 @@ function calculateQuestionScore($q, $answer)
             if ($fa > 0) {
                 $r = $fo / $fa;
 
-                if ($r > 1.1)
-                    $sf = 5;
+                if ($r > 1.1) $sf = 5;
                 elseif ($r > 0.7 && $r < 1.1) {
-                    if ($r < 0.9)
-                        $sf = 3;
-                    elseif (isEqualFloat($r, 0.9))
-                        $sf = 3.5;
-                    else
-                        $sf = 4;
+                    if ($r < 0.9) $sf = 3;
+                    elseif (isEqualFloat($r, 0.9)) $sf = 3.5;
+                    else $sf = 4;
                 } elseif ($r > 0.3 && $r < 0.6) {
-                    if ($r < 0.45)
-                        $sf = 1;
-                    elseif (isEqualFloat($r, 0.45))
-                        $sf = 1.5;
-                    else
-                        $sf = 2;
+                    if ($r < 0.45) $sf = 1;
+                    elseif (isEqualFloat($r, 0.45)) $sf = 1.5;
+                    else $sf = 2;
                 }
             }
 
             if ($ha > 0) {
                 $r = $ho / $ha;
 
-                if ($r > 1)
-                    $sh = 5;
-                elseif ($r > 0.8 && $r < 1)
-                    $sh = 4;
-                elseif ($r > 0.5 && $r < 0.8)
-                    $sh = 3;
+                if ($r > 1) $sh = 5;
+                elseif ($r > 0.8 && $r < 1) $sh = 4;
+                elseif ($r > 0.5 && $r < 0.8) $sh = 3;
                 elseif ($r > 0 && $r < 0.5) {
-                    if ($r < 0.25)
-                        $sh = 1;
-                    elseif (isEqualFloat($r, 0.25))
-                        $sh = 1.5;
-                    else
-                        $sh = 2;
+                    if ($r < 0.25) $sh = 1;
+                    elseif (isEqualFloat($r, 0.25)) $sh = 1.5;
+                    else $sh = 2;
                 }
             }
 
@@ -129,20 +112,16 @@ function calculateQuestionScore($q, $answer)
 
         case "weighted_range":
             $raw = 0;
-
             foreach ($scoring['weights'] as $k => $w) {
                 $raw += getInput($answer, $k) * $w;
             }
-
             return clampScore(scoreByRanges($raw, $scoring['ranges']), $max);
 
         case "capped_weighted_sum":
             $sum = 0;
-
             foreach ($scoring['weights'] as $k => $w) {
                 $sum += getInput($answer, $k) * $w;
             }
-
             return clampScore(min($sum, $scoring['cap']), $max);
 
         case "domestic_publication":
@@ -156,8 +135,7 @@ function calculateQuestionScore($q, $answer)
             $num = getInput($answer, $scoring['numerator']);
             $den = getInput($answer, $scoring['denominator']);
 
-            if ($den <= 0)
-                return 0;
+            if ($den <= 0) return 0;
 
             return clampScore(scoreByRanges($num / $den, $scoring['ranges']), $max);
 
@@ -165,8 +143,7 @@ function calculateQuestionScore($q, $answer)
             $th = getInput($answer, "threshold");
             $ac = getInput($answer, "actual");
 
-            if ($th <= 0 || $ac <= 0)
-                return 0;
+            if ($th <= 0 || $ac <= 0) return 0;
 
             return clampScore(min($scoring['max_score'] * ($th / $ac), $scoring['max_score']), $max);
 
@@ -174,8 +151,7 @@ function calculateQuestionScore($q, $answer)
             $ac = getInput($answer, "actual");
             $th = getInput($answer, "threshold");
 
-            if ($th <= 0)
-                return 0;
+            if ($th <= 0) return 0;
 
             return clampScore(min($scoring['max_score'] * ($ac / $th), $scoring['max_score']), $max);
 
@@ -191,14 +167,10 @@ function calculateQuestionScore($q, $answer)
         case "basic_program_role":
             $s = 0;
 
-            if (getInput($answer, "intl_lead") > 0)
-                $s = max($s, 2.5);
-            if (getInput($answer, "national_board") > 0)
-                $s = max($s, 2);
-            if (getInput($answer, "intl_member") > 0)
-                $s = max($s, 1);
-            if (getInput($answer, "national_member") > 0)
-                $s = max($s, 0.5);
+            if (getInput($answer, "intl_lead") > 0) $s = max($s, 2.5);
+            if (getInput($answer, "national_board") > 0) $s = max($s, 2);
+            if (getInput($answer, "intl_member") > 0) $s = max($s, 1);
+            if (getInput($answer, "national_member") > 0) $s = max($s, 0.5);
 
             return clampScore($s, $max);
 
@@ -207,8 +179,7 @@ function calculateQuestionScore($q, $answer)
                 + 3 * getInput($answer, "utility")
                 + min(2, 0.5 * getInput($answer, "application"));
 
-            if (getInput($answer, "intl_bonus") > 0)
-                $s += 1;
+            if (getInput($answer, "intl_bonus") > 0) $s += 1;
 
             return clampScore(min($s, 10), $max);
 
@@ -217,8 +188,7 @@ function calculateQuestionScore($q, $answer)
             $fte = getInput($answer, "fte");
             $bm = getInput($answer, "benchmark");
 
-            if ($fte <= 0 || $bm <= 0)
-                return 0;
+            if ($fte <= 0 || $bm <= 0) return 0;
 
             $p = ($ip / $fte) / $bm;
 
@@ -235,16 +205,11 @@ function calculateQuestionScore($q, $answer)
         case "cost_output_applied":
             $c = getInput($answer, "cost");
 
-            if ($c <= 0)
-                return 0;
-            if ($c < 800)
-                return 5;
-            if ($c <= 900)
-                return 4;
-            if ($c <= 1000)
-                return 3;
-            if ($c <= 2000)
-                return 2;
+            if ($c <= 0) return 0;
+            if ($c < 800) return 5;
+            if ($c <= 900) return 4;
+            if ($c <= 1000) return 3;
+            if ($c <= 2000) return 2;
 
             return 1;
 
@@ -252,43 +217,34 @@ function calculateQuestionScore($q, $answer)
             $e = getInput($answer, "external");
             $t = getInput($answer, "total");
 
-            if ($t <= 0 || $e <= 0)
-                return 0;
+            if ($t <= 0 || $e <= 0) return 0;
 
             $r = ($e / $t) * 100;
 
-            if ($r > 30)
-                return 10;
+            if ($r > 30) return 10;
 
             if ($r >= 15 && $r <= 30) {
-                if ($r < 22.5)
-                    return 6;
-                if (isEqualFloat($r, 22.5))
-                    return 7;
+                if ($r < 22.5) return 6;
+                if (isEqualFloat($r, 22.5)) return 7;
                 return 8;
             }
 
-            if ($r > 0)
-                return 5;
+            if ($r > 0) return 5;
 
             return 0;
 
         case "tech_localization":
             $p = max(getInput($answer, "p_lc"), getInput($answer, "p_ndh"));
 
-            if ($p > 70)
-                return 10;
+            if ($p > 70) return 10;
 
             if ($p >= 40 && $p <= 70) {
-                if ($p < 55)
-                    return 5;
-                if (isEqualFloat($p, 55))
-                    return 6.5;
+                if ($p < 55) return 5;
+                if (isEqualFloat($p, 55)) return 6.5;
                 return 8;
             }
 
-            if ($p > 0 && $p < 40)
-                return 4;
+            if ($p > 0 && $p < 40) return 4;
 
             return 0;
 
@@ -296,24 +252,19 @@ function calculateQuestionScore($q, $answer)
             $c = getInput($answer, "commercialized");
             $t = getInput($answer, "total");
 
-            if ($t <= 0 || $c <= 0)
-                return 0;
+            if ($t <= 0 || $c <= 0) return 0;
 
             $r = ($c / $t) * 100;
 
-            if ($r > 50)
-                return 10;
+            if ($r > 50) return 10;
 
             if ($r >= 30 && $r <= 50) {
-                if ($r < 40)
-                    return 5;
-                if (isEqualFloat($r, 40))
-                    return 6;
+                if ($r < 40) return 5;
+                if (isEqualFloat($r, 40)) return 6;
                 return 7;
             }
 
-            if ($r > 0)
-                return 4;
+            if ($r > 0) return 4;
 
             return 0;
 
@@ -322,22 +273,14 @@ function calculateQuestionScore($q, $answer)
             $cost = getInput($answer, "cost");
             $years = getInput($answer, "years");
 
-            if ($cost <= 0 || $rev < 0)
-                return 0;
+            if ($cost <= 0 || $rev < 0) return 0;
 
             $r = $rev / $cost;
 
-            if (isEqualFloat($r, 0))
-                return 0;
-
-            if ($r <= 1)
-                return 5;
-
-            if ($years == 3 && $r >= 5)
-                return 10;
-
-            if ($years == 5 && $r >= 10)
-                return 10;
+            if (isEqualFloat($r, 0)) return 0;
+            if ($r <= 1) return 5;
+            if ($years == 3 && $r >= 5) return 10;
+            if ($years == 5 && $r >= 10) return 10;
 
             return 9;
 
@@ -352,30 +295,20 @@ function calculateQuestionScore($q, $answer)
             return clampScore(min($s, 10), $max);
 
         case "policy_recommendation":
-            if (getInput($answer, "written_response_2") >= 2)
-                return 10;
-            if (getInput($answer, "official_5") >= 5)
-                return 9;
-            if (getInput($answer, "sector_3") >= 3)
-                return 8;
-            if (getInput($answer, "local_or_ministry_3") >= 3)
-                return 6;
-            if (getInput($answer, "local_1_2") >= 1)
-                return 3;
+            if (getInput($answer, "written_response_2") >= 2) return 10;
+            if (getInput($answer, "official_5") >= 5) return 9;
+            if (getInput($answer, "sector_3") >= 3) return 8;
+            if (getInput($answer, "local_or_ministry_3") >= 3) return 6;
+            if (getInput($answer, "local_1_2") >= 1) return 3;
 
             return 0;
 
         case "policy_applied":
-            if (getInput($answer, "new_build") > 0)
-                return 10;
-            if (getInput($answer, "replace") > 0)
-                return 8;
-            if (getInput($answer, "multiple_modify") >= 2)
-                return 6;
-            if (getInput($answer, "partial_modify") > 0)
-                return 4;
-            if (getInput($answer, "referenced") > 0)
-                return 2;
+            if (getInput($answer, "new_build") > 0) return 10;
+            if (getInput($answer, "replace") > 0) return 8;
+            if (getInput($answer, "multiple_modify") >= 2) return 6;
+            if (getInput($answer, "partial_modify") > 0) return 4;
+            if (getInput($answer, "referenced") > 0) return 2;
 
             return 0;
 
@@ -414,22 +347,17 @@ function calculateQuestionScore($q, $answer)
         case "policy_behavior_change":
             $l = getInput($answer, "level");
 
-            if ($l >= 3)
-                return 10;
-            if ($l == 2)
-                return 7;
-            if ($l == 1)
-                return 3;
+            if ($l >= 3) return 10;
+            if ($l == 2) return 7;
+            if ($l == 1) return 3;
 
             return 0;
 
         case "policy_diffusion":
             $l = getInput($answer, "level");
 
-            if ($l >= 2)
-                return 5;
-            if ($l == 1)
-                return 3;
+            if ($l >= 2) return 5;
+            if ($l == 1) return 3;
 
             return 0;
 
@@ -438,13 +366,33 @@ function calculateQuestionScore($q, $answer)
     }
 }
 
+function hasUploadedEvidence($funcKey, $questionId)
+{
+    $key = "evidence_" . $funcKey . "_" . $questionId;
+
+    if (!isset($_FILES[$key]) || !isset($_FILES[$key]['name'])) {
+        return false;
+    }
+
+    foreach ($_FILES[$key]['name'] as $idx => $name) {
+        if (
+            trim($name) !== "" &&
+            isset($_FILES[$key]['error'][$idx]) &&
+            $_FILES[$key]['error'][$idx] === UPLOAD_ERR_OK
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function uploadEvidenceFiles($funcKey, $questionId)
 {
     $key = "evidence_" . $funcKey . "_" . $questionId;
     $saved = [];
 
-    if (!isset($_FILES[$key]))
-        return "";
+    if (!isset($_FILES[$key])) return "";
 
     if (!is_dir("uploads")) {
         if (!mkdir("uploads", 0777, true)) {
@@ -452,35 +400,35 @@ function uploadEvidenceFiles($funcKey, $questionId)
         }
     }
 
-    // Kiểm tra quyền ghi
     if (!is_writable("uploads")) {
         return "[Thư mục uploads không có quyền ghi]";
     }
 
     foreach ($_FILES[$key]['name'] as $idx => $name) {
-        if (!$name)
+        if (!$name) continue;
+
+        if ($_FILES[$key]['error'][$idx] !== UPLOAD_ERR_OK) {
             continue;
+        }
 
         $tmp = $_FILES[$key]['tmp_name'][$idx];
         $safe = preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($name));
         $filename = date("Ymd_His") . "_" . uniqid() . "_" . $safe;
         $target = "uploads/" . $filename;
 
-        if (move_uploaded_file($tmp, $target))
+        if (move_uploaded_file($tmp, $target)) {
             $saved[] = $target;
+        }
     }
 
     return implode(", ", $saved);
 }
 
-// Hàm xử lý tên tệp: loại bỏ dấu tiếng Việt, chuyển sang chữ thường, thêm gạch dưới
 function slugify($text)
 {
-    // Loại bỏ dấu tiếng Việt bằng transliterator
     if (function_exists('transliterator_transliterate')) {
         $text = transliterator_transliterate('Any-Latin; Latin-ASCII;', $text);
     } else {
-        // Fallback nếu transliterator không có
         $vietnamese = array(
             'à' => 'a', 'á' => 'a', 'ả' => 'a', 'ã' => 'a', 'ạ' => 'a',
             'ă' => 'a', 'ằ' => 'a', 'ắ' => 'a', 'ẳ' => 'a', 'ẵ' => 'a', 'ặ' => 'a',
@@ -498,16 +446,11 @@ function slugify($text)
         );
         $text = str_replace(array_keys($vietnamese), array_values($vietnamese), $text);
     }
-    
-    // Chuyển sang chữ thường
+
     $text = strtolower($text);
-    
-    // Thay thế các ký tự không phải chữ/số bằng gạch dưới
     $text = preg_replace('/[^a-z0-9]+/', '_', $text);
-    
-    // Loại bỏ gạch dưới ở đầu và cuối
     $text = trim($text, '_');
-    
+
     return $text;
 }
 
@@ -519,7 +462,6 @@ function saveToExcel($organization, $results, $totalE, $rank)
         }
     }
 
-    // Kiểm tra quyền ghi cho thư mục
     if (!is_writable("results")) {
         return ["error" => "Thư mục 'results' không có quyền ghi. Vui lòng liên hệ quản trị viên để cập nhật quyền truy cập."];
     }
@@ -527,20 +469,17 @@ function saveToExcel($organization, $results, $totalE, $rank)
     $time = date("Y-m-d H:i:s");
     $timestamp = date("Ymd_His");
     $orgSafe = slugify($organization);
-    
-    // Tạo file riêng cho người dùng tải
+
     $downloadFile = "results/" . $timestamp . "_" . $orgSafe . ".tsv";
     $fpDownload = fopen($downloadFile, "w");
-    
+
     if (!$fpDownload) {
         return ["error" => "Không thể tạo file kết quả. Vui lòng kiểm tra quyền truy cập."];
     }
 
-    // Ghi header với BOM cho Excel
     fwrite($fpDownload, "\xEF\xBB\xBF");
     fwrite($fpDownload, "Thời gian\tTổ chức\tChức năng\tTrọng số\tĐt1\tĐt2\tĐt3\tĐt4\tĐT\tĐiểm quy đổi\tTổng E\tXếp loại\tNhóm\tCâu hỏi\tCó/Không\tĐiểm câu hỏi\tChú thích\tMinh chứng\n");
 
-    // Ghi dữ liệu vào file tải
     foreach ($results as $r) {
         foreach ($r['details'] as $d) {
             $row = [
@@ -570,41 +509,40 @@ function saveToExcel($organization, $results, $totalE, $rank)
 
     fclose($fpDownload);
 
-    // Append vào file tổng hợp results.tsv (cho quản trị viên)
-    // Chỉ lưu kết quả cuối cùng (mới nhất) của mỗi đơn vị
     $summaryFile = "results/results.tsv";
     $isNew = !file_exists($summaryFile);
-    
-    // Đọc file hiện tại và lọc bỏ các dòng của tổ chức này
+
     $existingLines = [];
     $headerLine = "";
-    
+
     if ($isNew) {
         $headerLine = "Thời gian\tTổ chức\tChức năng\tTrọng số\tĐt1\tĐt2\tĐt3\tĐt4\tĐT\tĐiểm quy đổi\tTổng E\tXếp loại\tNhóm\tCâu hỏi\tCó/Không\tĐiểm câu hỏi\tChú thích\tMinh chứng";
     } else {
         $fileContent = file_get_contents($summaryFile);
-        // Loại bỏ BOM nếu có
+
         if (substr($fileContent, 0, 3) === "\xEF\xBB\xBF") {
             $fileContent = substr($fileContent, 3);
         }
+
         $lines = explode("\n", $fileContent);
-        
+
         if (!empty($lines)) {
             $headerLine = array_shift($lines);
         }
-        
-        // Lọc bỏ các dòng của tổ chức này
+
         foreach ($lines as $line) {
             if (trim($line) === "") continue;
+
             $columns = explode("\t", $line);
+
             if (isset($columns[1]) && $columns[1] !== $organization) {
                 $existingLines[] = $line;
             }
         }
     }
-    
-    // Thêm dòng mới cho tổ chức này
+
     $newLines = [];
+
     foreach ($results as $r) {
         foreach ($r['details'] as $d) {
             $row = [
@@ -627,31 +565,27 @@ function saveToExcel($organization, $results, $totalE, $rank)
                 str_replace(["\t", "\n", "\r"], " ", $d['note']),
                 str_replace(["\t", "\n", "\r"], " ", $d['evidence'])
             ];
+
             $newLines[] = implode("\t", $row);
         }
     }
-    
-    // Ghi lại file với dữ liệu đã lọc
+
     $fpSummary = fopen($summaryFile, "w");
+
     if ($fpSummary) {
-        // Ghi BOM cho UTF-8
         fwrite($fpSummary, "\xEF\xBB\xBF");
-        
-        // Ghi header
         fwrite($fpSummary, $headerLine . "\n");
-        
-        // Ghi các dòng cũ (của các tổ chức khác)
+
         foreach ($existingLines as $line) {
             if (trim($line) !== "") {
                 fwrite($fpSummary, $line . "\n");
             }
         }
-        
-        // Ghi các dòng mới (của tổ chức hiện tại)
+
         foreach ($newLines as $line) {
             fwrite($fpSummary, $line . "\n");
         }
-        
+
         fclose($fpSummary);
     }
 
@@ -660,17 +594,79 @@ function saveToExcel($organization, $results, $totalE, $rank)
 
 $criteria = json_decode(file_get_contents("criteria.json"), true);
 
-$organization = $_POST['organization_name'] ?? "Không rõ";
+$organization = $_POST['organization_name'] ?? "";
 $functions = $_POST['function_type'] ?? [];
 $weights = $_POST['weight'] ?? [];
 $answers = $_POST['answers'] ?? [];
+
+if (trim($organization) === "") {
+    die("Thiếu tên đơn vị đánh giá.");
+}
+
+if (empty($functions)) {
+    die("Phải chọn ít nhất 1 chức năng.");
+}
+
+$weightSum = 0;
+
+foreach ($functions as $funcKey) {
+    $weightSum += (float) ($weights[$funcKey] ?? 0);
+}
+
+if (abs($weightSum - 100) > 0.00001) {
+    die("Tổng trọng số các chức năng đang chọn phải bằng 100%.");
+}
+
+foreach ($functions as $funcKey) {
+    if (!isset($criteria['functions'][$funcKey])) {
+        continue;
+    }
+
+    $func = $criteria['functions'][$funcKey];
+
+    foreach ($func['groups'] as $group) {
+        foreach ($group['criteria'] as $q) {
+            $answer = $answers[$funcKey][$q['id']] ?? [];
+
+            if (!isset($answer['yes']) || $answer['yes'] === "") {
+                die("Thiếu câu trả lời Có/Không cho tiêu chí: " . $q['text']);
+            }
+
+            if (!empty($q['inputs'])) {
+                foreach ($q['inputs'] as $input) {
+                    $inputName = $input['name'];
+
+                    if (
+                        !isset($answer['inputs'][$inputName]) ||
+                        trim((string) $answer['inputs'][$inputName]) === ""
+                    ) {
+                        die("Thiếu số liệu '" . $input['label'] . "' của tiêu chí: " . $q['text']);
+                    }
+                }
+            }
+
+            $isQuantitative = ($q['display_mode'] ?? "") === "quantitative" || !empty($q['inputs']);
+
+            if (!$isQuantitative) {
+                if (!isset($answer['note']) || trim($answer['note']) === "") {
+                    die("Thiếu ghi chú cho tiêu chí: " . $q['text']);
+                }
+            }
+
+            if (!hasUploadedEvidence($funcKey, $q['id'])) {
+                die("Thiếu minh chứng cho tiêu chí: " . $q['text']);
+            }
+        }
+    }
+}
 
 $results = [];
 $totalE = 0;
 
 foreach ($functions as $funcKey) {
-    if (!isset($criteria['functions'][$funcKey]))
+    if (!isset($criteria['functions'][$funcKey])) {
         continue;
+    }
 
     $func = $criteria['functions'][$funcKey];
 
@@ -723,18 +719,18 @@ foreach ($functions as $funcKey) {
     ];
 }
 
-if ($totalE >= 80)
+if ($totalE >= 80) {
     $rank = "A - Xuất sắc";
-elseif ($totalE >= 60)
+} elseif ($totalE >= 60) {
     $rank = "B - Tốt";
-elseif ($totalE >= 40)
+} elseif ($totalE >= 40) {
     $rank = "C - Trung bình";
-else
+} else {
     $rank = "D - Kém";
+}
 
 $saveResult = saveToExcel($organization, $results, $totalE, $rank);
 
-// Kiểm tra có lỗi khi lưu không
 if (is_array($saveResult) && isset($saveResult['error'])) {
     $errorMessage = $saveResult['error'];
     $downloadFile = null;
@@ -777,31 +773,31 @@ if (is_array($saveResult) && isset($saveResult['error'])) {
 
         <h2>Người đánh giá: <?= htmlspecialchars($organization) ?></h2>
 
-    <?php foreach ($results as $r): ?>
-        <div class="function-card">
-            <h2><?= htmlspecialchars($r['name']) ?></h2>
+        <?php foreach ($results as $r): ?>
+            <div class="function-card">
+                <h2><?= htmlspecialchars($r['name']) ?></h2>
 
-            <p>Trọng số: <?= $r['weight'] * 100 ?>%</p>
-            <p>Đt1: <?= round($r['dt1'], 2) ?></p>
-            <p>Đt2: <?= round($r['dt2'], 2) ?></p>
-            <p>Đt3: <?= round($r['dt3'], 2) ?></p>
-            <p>Đt4: <?= round($r['dt4'], 2) ?></p>
+                <p>Trọng số: <?= $r['weight'] * 100 ?>%</p>
+                <p>Đt1: <?= round($r['dt1'], 2) ?></p>
+                <p>Đt2: <?= round($r['dt2'], 2) ?></p>
+                <p>Đt3: <?= round($r['dt3'], 2) ?></p>
+                <p>Đt4: <?= round($r['dt4'], 2) ?></p>
 
-            <h3>ĐT: <?= round($r['dt'], 2) ?></h3>
-            <h3>Điểm quy đổi: <?= round($r['weighted'], 2) ?></h3>
+                <h3>ĐT: <?= round($r['dt'], 2) ?></h3>
+                <h3>Điểm quy đổi: <?= round($r['weighted'], 2) ?></h3>
+            </div>
+        <?php endforeach; ?>
+
+        <hr>
+
+        <h2>Tổng điểm E: <?= round($totalE, 2) ?></h2>
+        <h2>Xếp loại: <?= $rank ?></h2>
+
+        <div style="margin-top: 30px; text-align: center;">
+            <a href="index.php" style="display: inline-block; padding: 10px 20px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                ← Quay lại
+            </a>
         </div>
-    <?php endforeach; ?>
-
-    <hr>
-
-    <h2>Tổng điểm E: <?= round($totalE, 2) ?></h2>
-    <h2>Xếp loại: <?= $rank ?></h2>
-
-    <div style="margin-top: 30px; text-align: center;">
-        <a href="index.php" style="display: inline-block; padding: 10px 20px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
-            ← Quay lại
-        </a>
-    </div>
     </div>
 </body>
 
