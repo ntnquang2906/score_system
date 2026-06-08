@@ -473,6 +473,44 @@ function uploadEvidenceFiles($funcKey, $questionId)
     return implode(", ", $saved);
 }
 
+// Hàm xử lý tên tệp: loại bỏ dấu tiếng Việt, chuyển sang chữ thường, thêm gạch dưới
+function slugify($text)
+{
+    // Loại bỏ dấu tiếng Việt bằng transliterator
+    if (function_exists('transliterator_transliterate')) {
+        $text = transliterator_transliterate('Any-Latin; Latin-ASCII;', $text);
+    } else {
+        // Fallback nếu transliterator không có
+        $vietnamese = array(
+            'à' => 'a', 'á' => 'a', 'ả' => 'a', 'ã' => 'a', 'ạ' => 'a',
+            'ă' => 'a', 'ằ' => 'a', 'ắ' => 'a', 'ẳ' => 'a', 'ẵ' => 'a', 'ặ' => 'a',
+            'â' => 'a', 'ầ' => 'a', 'ấ' => 'a', 'ẩ' => 'a', 'ẫ' => 'a', 'ậ' => 'a',
+            'đ' => 'd',
+            'è' => 'e', 'é' => 'e', 'ẻ' => 'e', 'ẽ' => 'e', 'ẹ' => 'e',
+            'ê' => 'e', 'ề' => 'e', 'ế' => 'e', 'ể' => 'e', 'ễ' => 'e', 'ệ' => 'e',
+            'ì' => 'i', 'í' => 'i', 'ỉ' => 'i', 'ĩ' => 'i', 'ị' => 'i',
+            'ò' => 'o', 'ó' => 'o', 'ỏ' => 'o', 'õ' => 'o', 'ọ' => 'o',
+            'ô' => 'o', 'ồ' => 'o', 'ố' => 'o', 'ổ' => 'o', 'ỗ' => 'o', 'ộ' => 'o',
+            'ơ' => 'o', 'ờ' => 'o', 'ớ' => 'o', 'ở' => 'o', 'ỡ' => 'o', 'ợ' => 'o',
+            'ù' => 'u', 'ú' => 'u', 'ủ' => 'u', 'ũ' => 'u', 'ụ' => 'u',
+            'ư' => 'u', 'ừ' => 'u', 'ứ' => 'u', 'ử' => 'u', 'ữ' => 'u', 'ự' => 'u',
+            'ỳ' => 'y', 'ý' => 'y', 'ỷ' => 'y', 'ỹ' => 'y', 'ỵ' => 'y'
+        );
+        $text = str_replace(array_keys($vietnamese), array_values($vietnamese), $text);
+    }
+    
+    // Chuyển sang chữ thường
+    $text = strtolower($text);
+    
+    // Thay thế các ký tự không phải chữ/số bằng gạch dưới
+    $text = preg_replace('/[^a-z0-9]+/', '_', $text);
+    
+    // Loại bỏ gạch dưới ở đầu và cuối
+    $text = trim($text, '_');
+    
+    return $text;
+}
+
 function saveToExcel($organization, $results, $totalE, $rank)
 {
     if (!is_dir("results")) {
@@ -488,7 +526,7 @@ function saveToExcel($organization, $results, $totalE, $rank)
 
     $time = date("Y-m-d H:i:s");
     $timestamp = date("Ymd_His");
-    $orgSafe = preg_replace('/[^a-zA-Z0-9._-]/', '_', $organization);
+    $orgSafe = slugify($organization);
     
     // Tạo file riêng cho người dùng tải
     $downloadFile = "results/" . $timestamp . "_" . $orgSafe . ".tsv";

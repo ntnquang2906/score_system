@@ -29,23 +29,35 @@ if (isset($_GET['download'])) {
 // Định nghĩa file tổng hợp
 $summaryFile = "results/results.tsv";
 
-// Lấy danh sách file trong thư mục results (chỉ hiển thị file results.tsv)
+// Lấy danh sách tất cả file trong thư mục results
 $resultsDir = "results/";
 $files = [];
 
-if (is_dir($resultsDir) && file_exists($summaryFile)) {
-    $files[] = [
-        'name' => 'results.tsv',
-        'size' => filesize($summaryFile),
-        'time' => filemtime($summaryFile),
-        'modified' => date('d/m/Y H:i:s', filemtime($summaryFile))
-    ];
+if (is_dir($resultsDir)) {
+    $fileList = scandir($resultsDir);
+    foreach ($fileList as $file) {
+        if ($file !== '.' && $file !== '..' && is_file($resultsDir . $file)) {
+            $filepath = $resultsDir . $file;
+            $files[] = [
+                'name' => $file,
+                'size' => filesize($filepath),
+                'time' => filemtime($filepath),
+                'modified' => date('d/m/Y H:i:s', filemtime($filepath))
+            ];
+        }
+    }
+    
+    // Sắp xếp file theo thời gian, mới nhất trước
+    usort($files, function($a, $b) {
+        return $b['time'] - $a['time'];
+    });
 }
 
 // Lấy nội dung file tổng hợp results.tsv để tính toán
 $summaryData = [];
 $summaryRows = 0;
 $uniqueOrganizations = 0;
+$detailFilesCount = 0;
 
 if (file_exists($summaryFile)) {
     $content = file_get_contents($summaryFile);
@@ -77,6 +89,15 @@ if (file_exists($summaryFile)) {
         if (!empty(trim($line))) {
             $summaryData[] = explode("\t", $line);
         }
+    }
+}
+
+// Đếm số file chi tiết (không tính results.tsv)
+$detailFilesCount = count($files);
+foreach ($files as $file) {
+    if ($file['name'] === 'results.tsv') {
+        $detailFilesCount--;
+        break;
     }
 }
 
@@ -287,8 +308,8 @@ if (file_exists($summaryFile)) {
                     <div class="value"><?php echo $uniqueOrganizations; ?></div>
                 </div>
                 <div class="stat-box">
-                    <div class="label">Tổng số file riêng lẻ</div>
-                    <div class="value"><?php echo count($files); ?></div>
+                    <div class="label">Tổng số file chi tiết</div>
+                    <div class="value"><?php echo $detailFilesCount; ?></div>
                 </div>
                 <div class="stat-box">
                     <div class="label">File tổng hợp</div>
