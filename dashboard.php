@@ -10,11 +10,11 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 // Xử lý tải file
 if (isset($_GET['download'])) {
     $file = $_GET['download'];
-    
+
     // Validate đường dẫn file để tránh directory traversal
     $file = basename($file);
     $filepath = "results/" . $file;
-    
+
     // Kiểm tra file tồn tại và nằm trong thư mục results
     if (file_exists($filepath) && strpos(realpath($filepath), realpath("results/")) === 0) {
         header('Content-Description: File Transfer');
@@ -29,27 +29,74 @@ if (isset($_GET['download'])) {
 // Định nghĩa file tổng hợp
 $summaryFile = "results/results.tsv";
 
-// Lấy danh sách tất cả file trong thư mục results
+// Lấy danh sách file: results.tsv + file chi tiết mới nhất theo từng đơn vị
 $resultsDir = "results/";
 $files = [];
+$latestFilesByOrg = [];
 
 if (is_dir($resultsDir)) {
     $fileList = scandir($resultsDir);
+
     foreach ($fileList as $file) {
-        if ($file !== '.' && $file !== '..' && is_file($resultsDir . $file)) {
-            $filepath = $resultsDir . $file;
+        if ($file === '.' || $file === '..') {
+            continue;
+        }
+
+        $filepath = $resultsDir . $file;
+
+        if (!is_file($filepath)) {
+            continue;
+        }
+
+        // Luôn hiển thị file tổng hợp results.tsv
+        if ($file === 'results.tsv') {
             $files[] = [
                 'name' => $file,
                 'size' => filesize($filepath),
                 'time' => filemtime($filepath),
+                'timestamp' => date('Ymd_His', filemtime($filepath)),
+                'modified' => date('d/m/Y H:i:s', filemtime($filepath))
+            ];
+            continue;
+        }
+
+        // File chi tiết có format: YYYYMMDD_HHMMSS_ten_don_vi.tsv
+        if (!preg_match('/^(\d{8}_\d{6})_(.+)\.tsv$/', $file, $matches)) {
+            continue;
+        }
+
+        $timestamp = $matches[1];
+        $orgKey = $matches[2];
+
+        if (
+            !isset($latestFilesByOrg[$orgKey]) ||
+            $timestamp > $latestFilesByOrg[$orgKey]['timestamp']
+        ) {
+            $latestFilesByOrg[$orgKey] = [
+                'name' => $file,
+                'size' => filesize($filepath),
+                'time' => filemtime($filepath),
+                'timestamp' => $timestamp,
                 'modified' => date('d/m/Y H:i:s', filemtime($filepath))
             ];
         }
     }
-    
-    // Sắp xếp file theo thời gian, mới nhất trước
-    usort($files, function($a, $b) {
-        return $b['time'] - $a['time'];
+
+    foreach ($latestFilesByOrg as $fileInfo) {
+        $files[] = $fileInfo;
+    }
+
+    // results.tsv luôn đứng đầu, các file chi tiết mới nhất sắp xếp mới nhất trước
+    usort($files, function ($a, $b) {
+        if ($a['name'] === 'results.tsv') {
+            return -1;
+        }
+
+        if ($b['name'] === 'results.tsv') {
+            return 1;
+        }
+
+        return strcmp($b['timestamp'], $a['timestamp']);
     });
 }
 
@@ -61,30 +108,36 @@ $detailFilesCount = 0;
 
 if (file_exists($summaryFile)) {
     $content = file_get_contents($summaryFile);
+
     // Xóa BOM nếu có
     if (substr($content, 0, 3) === "\xEF\xBB\xBF") {
         $content = substr($content, 3);
     }
-    
+
     $lines = explode("\n", $content);
-    $summaryRows = count($lines) - 1; // Trừ header
-    
-    // Đếm số lượng đơn vị duy nhất (cột Tổ chức - cột thứ 2, index 1)
+    $summaryRows = count(array_filter($lines, function ($line) {
+        return trim($line) !== "";
+    })) - 1; // Trừ header
+
+    // Đếm số lượng đơn vị duy nhất
     $organizations = [];
+
     for ($i = 1; $i < count($lines); $i++) {
         if (!empty(trim($lines[$i]))) {
             $parts = explode("\t", $lines[$i]);
+
             if (isset($parts[1]) && !empty(trim($parts[1]))) {
                 $org = trim($parts[1]);
                 $organizations[$org] = true;
             }
         }
     }
+
     $uniqueOrganizations = count($organizations);
-    
+
     // Hiển thị 10 dòng gần đây nhất
     $displayLines = array_slice($lines, max(0, count($lines) - 11), 11);
-    
+
     foreach ($displayLines as $line) {
         if (!empty(trim($line))) {
             $summaryData[] = explode("\t", $line);
@@ -92,12 +145,12 @@ if (file_exists($summaryFile)) {
     }
 }
 
-// Đếm số file chi tiết (không tính results.tsv)
-$detailFilesCount = count($files);
+// Đếm số file chi tiết đang hiển thị, không tính results.tsv
+$detailFilesCount = 0;
+
 foreach ($files as $file) {
-    if ($file['name'] === 'results.tsv') {
-        $detailFilesCount--;
-        break;
+    if ($file['name'] !== 'results.tsv') {
+        $detailFilesCount++;
     }
 }
 
@@ -261,7 +314,9 @@ foreach ($files as $file) {
             overflow-wrap: break-word;
         }
 
-        .data-preview th:nth-child(19) { width: 100px; } /* Minh chứng - thu nhỏ */
+        .data-preview th:nth-child(19) {
+            width: 100px;
+        }
 
         .empty-message {
             color: #999;
@@ -282,6 +337,26 @@ foreach ($files as $file) {
             color: #666;
             font-size: 13px;
             margin-top: 10px;
+        }
+
+        .view-btn,
+        .download-btn {
+            display: inline-block;
+            padding: 6px 10px;
+            margin-right: 5px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .view-btn {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .download-btn {
+            background-color: #28a745;
+            color: white;
         }
     </style>
 </head>
@@ -308,7 +383,7 @@ foreach ($files as $file) {
                     <div class="value"><?php echo $uniqueOrganizations; ?></div>
                 </div>
                 <div class="stat-box">
-                    <div class="label">Tổng số file chi tiết</div>
+                    <div class="label">Tổng số file chi tiết đang hiển thị</div>
                     <div class="value"><?php echo $detailFilesCount; ?></div>
                 </div>
                 <div class="stat-box">
@@ -321,7 +396,7 @@ foreach ($files as $file) {
         <div class="section">
             <h2>📁 Danh sách file kết quả</h2>
             <div class="info-box">
-                💡 Nhấn <strong>Tải xuống</strong> để lưu file, hoặc <strong>Xem</strong> để xem nội dung trực tuyến
+                💡 Danh sách chỉ hiển thị <strong>file tổng hợp</strong> và <strong>file chi tiết mới nhất của mỗi đơn vị</strong>.
             </div>
 
             <?php if (empty($files)): ?>
