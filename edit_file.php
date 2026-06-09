@@ -12,17 +12,13 @@ if (!isset($_SESSION['admin_role']) || $_SESSION['admin_role'] !== 'editor') {
 
 function removeBom($content)
 {
-    if (substr($content, 0, 3) === "\xEF\xBB\xBF") {
-        return substr($content, 3);
-    }
-    return $content;
+    return substr($content, 0, 3) === "\xEF\xBB\xBF" ? substr($content, 3) : $content;
 }
 
 function readTsvFile($filepath)
 {
     $content = removeBom(file_get_contents($filepath));
     $lines = explode("\n", $content);
-
     $data = [];
 
     foreach ($lines as $line) {
@@ -61,6 +57,22 @@ function writeTsvFile($filepath, $data)
 function rowToString($row)
 {
     return implode("\t", $row);
+}
+
+function safeTsvFilename($filename)
+{
+    $filename = basename(trim($filename));
+    $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
+
+    if ($filename === "") {
+        return "";
+    }
+
+    if (!str_ends_with(strtolower($filename), ".tsv")) {
+        $filename .= ".tsv";
+    }
+
+    return $filename;
 }
 
 function syncDetailToSummary($oldData, $newData)
@@ -185,8 +197,14 @@ if (strpos(realpath($filepath), realpath("results/")) !== 0) {
     die("Quyền truy cập bị từ chối.");
 }
 
+$isSummaryFile = ($file === "results.tsv");
+
 $message = "";
 $error = "";
+
+if (isset($_GET['renamed']) && $_GET['renamed'] === "1") {
+    $message = "Đã đổi tên file thành công.";
+}
 
 $oldData = readTsvFile($filepath);
 $data = $oldData;
@@ -212,7 +230,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $saved = writeTsvFile($filepath, $newData);
 
         if ($saved) {
-            if ($file === "results.tsv") {
+            if ($isSummaryFile) {
                 syncSummaryToDetails($oldData, $newData);
             } else {
                 syncDetailToSummary($oldData, $newData);
@@ -220,6 +238,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $message = "Đã lưu và đồng bộ dữ liệu thành công.";
             $data = readTsvFile($filepath);
+
+            // Chỉ cho đổi tên file chi tiết, không cho đổi tên results.tsv
+            if (!$isSummaryFile) {
+                $newFilename = safeTsvFilename($_POST['new_filename'] ?? $file);
+
+                if ($newFilename === "") {
+                    $error = "Tên file mới không hợp lệ.";
+                } elseif ($newFilename !== $file) {
+                    $newFilepath = "results/" . $newFilename;
+
+                    if (file_exists($newFilepath)) {
+                        $error = "Tên file mới đã tồn tại. Vui lòng chọn tên khác.";
+                    } else {
+                        if (rename($filepath, $newFilepath)) {
+                            header("Location: edit_file.php?file=" . urlencode($newFilename) . "&renamed=1");
+                            exit();
+                        } else {
+                            $error = "Không thể đổi tên file. Vui lòng kiểm tra quyền thư mục results.";
+                        }
+                    }
+                }
+            }
         } else {
             $error = "Không thể ghi file. Vui lòng kiểm tra quyền thư mục results.";
         }
@@ -285,7 +325,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .notice {
@@ -310,6 +349,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: #d1ecf1;
             color: #0c5460;
             border: 1px solid #bee5eb;
+        }
+
+        .filename-box {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .filename-box label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .filename-box input {
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: Arial, sans-serif;
+        }
+
+        .filename-box small {
+            display: block;
+            color: #666;
+            margin-top: 6px;
+            line-height: 1.5;
         }
 
         .toolbar {
@@ -426,16 +495,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <div class="notice info">
-                Bạn đang sửa trực tiếp file TSV. Khi lưu:
+                Khi lưu:
                 <strong>
-                    <?php echo $file === "results.tsv" ? "file tổng hợp sẽ đồng bộ ngược sang các file chi tiết tương ứng." : "file chi tiết sẽ đồng bộ lên results.tsv."; ?>
+                    <?php echo $isSummaryFile
+                        ? "file tổng hợp chỉ được sửa nội dung, không được đổi tên."
+                        : "file chi tiết sẽ đồng bộ nội dung lên results.tsv. Tên file chi tiết cũng có thể được đổi để đồng nhất tên đơn vị."; ?>
                 </strong>
-            </div>
-
-            <div class="toolbar">
-                <button type="submit" form="editForm" class="btn save-btn">💾 Lưu thay đổi</button>
-                <a href="view_file.php?file=<?php echo urlencode($file); ?>" class="btn view-btn">👁️ Xem file</a>
-                <a href="dashboard.php" class="btn back-btn">← Quay lại</a>
             </div>
 
             <?php if (empty($data)): ?>
@@ -444,12 +509,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <form method="POST" id="editForm">
                     <input type="hidden" name="file" value="<?php echo htmlspecialchars($file); ?>">
 
+                    <div class="filename-box">
+                        <label>Tên file</label>
+
+                        <?php if ($isSummaryFile): ?>
+                            <input type="text" value="<?php echo htmlspecialchars($file); ?>" disabled>
+                            <small>
+                                File <strong>results.tsv</strong> là file tổng hợp hệ thống nên không được đổi tên.
+                            </small>
+                        <?php else: ?>
+                            <input
+                                type="text"
+                                name="new_filename"
+                                value="<?php echo htmlspecialchars($file); ?>">
+                            <small>
+                                Chỉ nên đổi phần tên đơn vị để đồng nhất. Hệ thống sẽ tự giữ/ép đuôi <strong>.tsv</strong>.
+                                Không dùng dấu cách/ký tự đặc biệt; nếu có, hệ thống sẽ tự chuyển thành dấu gạch dưới.
+                            </small>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="toolbar">
+                        <button type="submit" form="editForm" class="btn save-btn">💾 Lưu thay đổi</button>
+                        <a href="view_file.php?file=<?php echo urlencode($file); ?>" class="btn view-btn">👁️ Xem file</a>
+                        <a href="dashboard.php" class="btn back-btn">← Quay lại</a>
+                    </div>
+
                     <div class="table-wrap">
                         <table>
                             <thead>
                                 <tr>
                                     <th class="row-number">#</th>
-                                    <?php foreach ($data[0] as $colIndex => $header): ?>
+                                    <?php foreach ($data[0] as $header): ?>
                                         <th><?php echo htmlspecialchars($header); ?></th>
                                     <?php endforeach; ?>
                                 </tr>

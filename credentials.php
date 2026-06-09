@@ -1,9 +1,25 @@
 <?php
 // Danh sách tài khoản cho lãnh đạo/quản trị viên
+// role = editor: được xem, tải và sửa file kết quả
+// role = viewer: chỉ xem và tải, không được sửa
+
 $accounts = [
-    'admin' => 'dhqg2026',
-    'Tuttt' => 'Tuvnu2026',
-    'Sonpb' => 'Sonvnu2026'
+    'admin' => [
+        'password' => 'dhqg2026',
+        'role' => 'editor'
+    ],
+    'Tuttt' => [
+        'password' => 'Tuvnu2026',
+        'role' => 'editor'
+    ],
+    'Sonpb' => [
+        'password' => 'Sonvnu2026',
+        'role' => 'editor'
+    ]
 ];
 
-// Nếu cần thêm tài khoản mới, thêm vào array trên theo format: 'username' => 'password'
+// Nếu thêm tài khoản mới sau này:
+// 'username' => [
+//     'password' => 'matkhau',
+//     'role' => 'viewer'
+// ];

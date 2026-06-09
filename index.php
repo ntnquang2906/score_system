@@ -44,7 +44,7 @@
         <div id="form-area"></div>
         <button type="submit">Tính điểm & Lưu Excel</button>
     </form>
-    <script src="script.js"></script>
+    <script src="script.js?v=5"></script>
 </body>
 
 </html>

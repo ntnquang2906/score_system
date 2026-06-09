@@ -424,6 +424,26 @@ function uploadEvidenceFiles($funcKey, $questionId)
     return implode(", ", $saved);
 }
 
+function getEvidenceText($evidenceTexts, $funcKey, $questionId)
+{
+    return trim($evidenceTexts[$funcKey][$questionId] ?? "");
+}
+
+function buildEvidenceValue($evidenceText, $uploadedFiles)
+{
+    $parts = [];
+
+    if (trim($evidenceText) !== "") {
+        $parts[] = "Mô tả: " . trim($evidenceText);
+    }
+
+    if (trim($uploadedFiles) !== "") {
+        $parts[] = "Tệp: " . trim($uploadedFiles);
+    }
+
+    return implode(" | ", $parts);
+}
+
 function slugify($text)
 {
     if (function_exists('transliterator_transliterate')) {
@@ -458,12 +478,12 @@ function saveToExcel($organization, $results, $totalE, $rank)
 {
     if (!is_dir("results")) {
         if (!mkdir("results", 0777, true)) {
-            return ["error" => "Không thể tạo thư mục 'results'. Vui lòng kiểm tra quyền truy cập của thư mục."];
+            return ["error" => "Không thể tạo thư mục 'results'."];
         }
     }
 
     if (!is_writable("results")) {
-        return ["error" => "Thư mục 'results' không có quyền ghi. Vui lòng liên hệ quản trị viên để cập nhật quyền truy cập."];
+        return ["error" => "Thư mục 'results' không có quyền ghi."];
     }
 
     $time = date("Y-m-d H:i:s");
@@ -474,7 +494,7 @@ function saveToExcel($organization, $results, $totalE, $rank)
     $fpDownload = fopen($downloadFile, "w");
 
     if (!$fpDownload) {
-        return ["error" => "Không thể tạo file kết quả. Vui lòng kiểm tra quyền truy cập."];
+        return ["error" => "Không thể tạo file kết quả."];
     }
 
     fwrite($fpDownload, "\xEF\xBB\xBF");
@@ -577,9 +597,7 @@ function saveToExcel($organization, $results, $totalE, $rank)
         fwrite($fpSummary, $headerLine . "\n");
 
         foreach ($existingLines as $line) {
-            if (trim($line) !== "") {
-                fwrite($fpSummary, $line . "\n");
-            }
+            fwrite($fpSummary, $line . "\n");
         }
 
         foreach ($newLines as $line) {
@@ -598,6 +616,7 @@ $organization = $_POST['organization_name'] ?? "";
 $functions = $_POST['function_type'] ?? [];
 $weights = $_POST['weight'] ?? [];
 $answers = $_POST['answers'] ?? [];
+$evidenceTexts = $_POST['evidence_text'] ?? [];
 
 if (trim($organization) === "") {
     die("Thiếu tên đơn vị đánh giá.");
@@ -653,7 +672,10 @@ foreach ($functions as $funcKey) {
                 }
             }
 
-            if (!hasUploadedEvidence($funcKey, $q['id'])) {
+            $evidenceText = getEvidenceText($evidenceTexts, $funcKey, $q['id']);
+            $hasFile = hasUploadedEvidence($funcKey, $q['id']);
+
+            if ($evidenceText === "" && !$hasFile) {
                 die("Thiếu minh chứng cho tiêu chí: " . $q['text']);
             }
         }
@@ -684,7 +706,10 @@ foreach ($functions as $funcKey) {
             $answer = $answers[$funcKey][$q['id']] ?? [];
 
             $score = calculateQuestionScore($q, $answer);
-            $evidence = uploadEvidenceFiles($funcKey, $q['id']);
+
+            $evidenceText = getEvidenceText($evidenceTexts, $funcKey, $q['id']);
+            $uploadedFiles = uploadEvidenceFiles($funcKey, $q['id']);
+            $evidence = buildEvidenceValue($evidenceText, $uploadedFiles);
 
             $dtScores[$group['id']] += $score;
 

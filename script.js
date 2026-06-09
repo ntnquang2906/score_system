@@ -128,6 +128,7 @@ function renderQuestion(type, groupId, q) {
     const basePath = `${type}.${q.id}`;
     const yesVal = getValue(`${basePath}.yes`);
     const noteVal = getValue(`${basePath}.note`);
+    const evidenceTextVal = getValue(`${basePath}.evidence_text`);
 
     const isQuantitative =
         q.display_mode === "quantitative" || !!q.inputs;
@@ -189,14 +190,22 @@ function renderQuestion(type, groupId, q) {
     }
 
     html += `
-        <div>
+        <div class="evidence-box">
             <label>Minh chứng <span style="color:red">*</span></label>
+
+            <textarea
+                name="evidence_text[${type}][${q.id}]"
+                oninput="saveValue('${basePath}.evidence_text', this.value)"
+                placeholder="Nhập mô tả minh chứng, số quyết định, đường link, số văn bản... hoặc tải tệp bên dưới">${evidenceTextVal}</textarea>
+
             <input
                 type="file"
                 multiple
-                required
                 name="evidence_${type}_${q.id}[]">
-            <small>Bắt buộc tải lên minh chứng</small>
+
+            <small>
+                Có thể nhập mô tả, tải tệp hoặc cả hai. Hỗ trợ ảnh, PDF, Word, Excel, ZIP...
+            </small>
         </div>
     `;
 
@@ -253,19 +262,38 @@ function validateForm() {
         const textareas = section.querySelectorAll("textarea");
 
         for (const t of textareas) {
-            if (t.value.trim() === "") {
+            if (
+                !t.name.startsWith("evidence_text") &&
+                t.value.trim() === ""
+            ) {
                 alert("Vui lòng nhập đầy đủ phần Chú thích/Ghi chú đang hiển thị.");
                 t.focus();
                 return false;
             }
         }
 
-        const fileInputs = section.querySelectorAll('input[type="file"]');
+        const rows = section.querySelectorAll(".question-row");
 
-        for (const f of fileInputs) {
-            if (f.files.length === 0) {
-                alert("Vui lòng tải lên đầy đủ file Minh chứng.");
-                f.focus();
+        for (const row of rows) {
+            const fileInput = row.querySelector('input[type="file"]');
+            const evidenceTextarea = row.querySelector('textarea[name^="evidence_text"]');
+
+            const hasFile =
+                fileInput &&
+                fileInput.files &&
+                fileInput.files.length > 0;
+
+            const hasText =
+                evidenceTextarea &&
+                evidenceTextarea.value.trim() !== "";
+
+            if (!hasFile && !hasText) {
+                alert("Mỗi tiêu chí phải có ít nhất một minh chứng: mô tả minh chứng hoặc tệp đính kèm.");
+
+                if (evidenceTextarea) {
+                    evidenceTextarea.focus();
+                }
+
                 return false;
             }
         }

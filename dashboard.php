@@ -1,21 +1,18 @@
 <?php
 session_start();
 
-// Kiểm tra đăng nhập
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     header("Location: login.php");
     exit();
 }
 
+$canEdit = isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'editor';
+
 // Xử lý tải file
 if (isset($_GET['download'])) {
-    $file = $_GET['download'];
-
-    // Validate đường dẫn file để tránh directory traversal
-    $file = basename($file);
+    $file = basename($_GET['download']);
     $filepath = "results/" . $file;
 
-    // Kiểm tra file tồn tại và nằm trong thư mục results
     if (file_exists($filepath) && strpos(realpath($filepath), realpath("results/")) === 0) {
         header('Content-Description: File Transfer');
         header('Content-Type: application/octet-stream');
@@ -26,10 +23,8 @@ if (isset($_GET['download'])) {
     }
 }
 
-// Định nghĩa file tổng hợp
 $summaryFile = "results/results.tsv";
 
-// Lấy danh sách file: results.tsv + file chi tiết mới nhất theo từng đơn vị
 $resultsDir = "results/";
 $files = [];
 $latestFilesByOrg = [];
@@ -48,7 +43,6 @@ if (is_dir($resultsDir)) {
             continue;
         }
 
-        // Luôn hiển thị file tổng hợp results.tsv
         if ($file === 'results.tsv') {
             $files[] = [
                 'name' => $file,
@@ -60,7 +54,6 @@ if (is_dir($resultsDir)) {
             continue;
         }
 
-        // File chi tiết có format: YYYYMMDD_HHMMSS_ten_don_vi.tsv
         if (!preg_match('/^(\d{8}_\d{6})_(.+)\.tsv$/', $file, $matches)) {
             continue;
         }
@@ -86,7 +79,6 @@ if (is_dir($resultsDir)) {
         $files[] = $fileInfo;
     }
 
-    // results.tsv luôn đứng đầu, các file chi tiết mới nhất sắp xếp mới nhất trước
     usort($files, function ($a, $b) {
         if ($a['name'] === 'results.tsv') {
             return -1;
@@ -100,7 +92,6 @@ if (is_dir($resultsDir)) {
     });
 }
 
-// Lấy nội dung file tổng hợp results.tsv để tính toán
 $summaryData = [];
 $summaryRows = 0;
 $uniqueOrganizations = 0;
@@ -109,17 +100,16 @@ $detailFilesCount = 0;
 if (file_exists($summaryFile)) {
     $content = file_get_contents($summaryFile);
 
-    // Xóa BOM nếu có
     if (substr($content, 0, 3) === "\xEF\xBB\xBF") {
         $content = substr($content, 3);
     }
 
     $lines = explode("\n", $content);
+
     $summaryRows = count(array_filter($lines, function ($line) {
         return trim($line) !== "";
-    })) - 1; // Trừ header
+    })) - 1;
 
-    // Đếm số lượng đơn vị duy nhất
     $organizations = [];
 
     for ($i = 1; $i < count($lines); $i++) {
@@ -135,7 +125,6 @@ if (file_exists($summaryFile)) {
 
     $uniqueOrganizations = count($organizations);
 
-    // Hiển thị 10 dòng gần đây nhất
     $displayLines = array_slice($lines, max(0, count($lines) - 11), 11);
 
     foreach ($displayLines as $line) {
@@ -145,15 +134,11 @@ if (file_exists($summaryFile)) {
     }
 }
 
-// Đếm số file chi tiết đang hiển thị, không tính results.tsv
-$detailFilesCount = 0;
-
 foreach ($files as $file) {
     if ($file['name'] !== 'results.tsv') {
         $detailFilesCount++;
     }
 }
-
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -261,10 +246,6 @@ foreach ($files as $file) {
             color: #667eea;
         }
 
-        .file-list {
-            overflow-x: auto;
-        }
-
         table {
             width: 100%;
             border-collapse: collapse;
@@ -297,27 +278,6 @@ foreach ($files as $file) {
             font-size: 13px;
         }
 
-        .data-preview {
-            overflow-x: auto;
-            margin-top: 15px;
-        }
-
-        .data-preview table {
-            font-size: 11px;
-            table-layout: fixed;
-        }
-
-        .data-preview th,
-        .data-preview td {
-            padding: 6px 8px;
-            word-break: break-word;
-            overflow-wrap: break-word;
-        }
-
-        .data-preview th:nth-child(19) {
-            width: 100px;
-        }
-
         .empty-message {
             color: #999;
             padding: 20px;
@@ -333,30 +293,37 @@ foreach ($files as $file) {
             border: 1px solid #bee5eb;
         }
 
-        .summary-preview {
-            color: #666;
-            font-size: 13px;
-            margin-top: 10px;
-        }
-
         .view-btn,
-        .download-btn {
+        .download-btn,
+        .edit-btn {
             display: inline-block;
             padding: 6px 10px;
             margin-right: 5px;
             border-radius: 4px;
             text-decoration: none;
             font-size: 13px;
+            color: white;
         }
 
         .view-btn {
             background-color: #17a2b8;
-            color: white;
         }
 
         .download-btn {
             background-color: #28a745;
-            color: white;
+        }
+
+        .edit-btn {
+            background-color: #ffc107;
+            color: #333;
+        }
+
+        .role-badge {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
     </style>
 </head>
@@ -367,6 +334,9 @@ foreach ($files as $file) {
             <h1>📊 Dashboard - Kết quả đánh giá KH&CN</h1>
             <div class="user-info">
                 <span>👤 <?php echo htmlspecialchars($_SESSION['admin_username']); ?></span>
+                <span class="role-badge">
+                    <?php echo $canEdit ? 'Quyền sửa' : 'Chỉ xem'; ?>
+                </span>
                 <form method="POST" action="logout.php" style="margin: 0;">
                     <button type="submit" class="logout-btn">Đăng xuất</button>
                 </form>
@@ -397,6 +367,9 @@ foreach ($files as $file) {
             <h2>📁 Danh sách file kết quả</h2>
             <div class="info-box">
                 💡 Danh sách chỉ hiển thị <strong>file tổng hợp</strong> và <strong>file chi tiết mới nhất của mỗi đơn vị</strong>.
+                <?php if ($canEdit): ?>
+                    Tài khoản hiện tại có quyền <strong>sửa dữ liệu</strong>.
+                <?php endif; ?>
             </div>
 
             <?php if (empty($files)): ?>
@@ -420,6 +393,10 @@ foreach ($files as $file) {
                                 <td>
                                     <a href="view_file.php?file=<?php echo urlencode($file['name']); ?>" class="view-btn">Xem</a>
                                     <a href="?download=<?php echo urlencode($file['name']); ?>" class="download-btn">Tải xuống</a>
+
+                                    <?php if ($canEdit): ?>
+                                        <a href="edit_file.php?file=<?php echo urlencode($file['name']); ?>" class="edit-btn">Sửa</a>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

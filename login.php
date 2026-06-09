@@ -15,12 +15,17 @@ $error = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
-    
-    // Kiểm tra tài khoản trong danh sách
-    if (isset($accounts[$username]) && $accounts[$username] === $password) {
+
+    if (
+        isset($accounts[$username]) &&
+        isset($accounts[$username]['password']) &&
+        $accounts[$username]['password'] === $password
+    ) {
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['admin_username'] = $username;
+        $_SESSION['admin_role'] = $accounts[$username]['role'] ?? 'viewer';
         $_SESSION['login_time'] = time();
+
         header("Location: dashboard.php");
         exit();
     } else {
