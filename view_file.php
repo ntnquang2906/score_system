@@ -6,23 +6,23 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit();
 }
 
-if (!isset($_SESSION['admin_role']) || $_SESSION['admin_role'] !== 'editor') {
-    die("Bạn không có quyền sửa file kết quả.");
-}
+$canEdit = isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'editor';
+
+$resultsDir = "results/";
 
 function removeBom($content)
 {
-    if (substr($content, 0, 3) === "\xEF\xBB\xBF") {
-        return substr($content, 3);
-    }
-    return $content;
+    return substr($content, 0, 3) === "\xEF\xBB\xBF" ? substr($content, 3) : $content;
 }
 
 function readTsvFile($filepath)
 {
+    if (!file_exists($filepath) || !is_file($filepath)) {
+        return [];
+    }
+
     $content = removeBom(file_get_contents($filepath));
     $lines = explode("\n", $content);
-
     $data = [];
 
     foreach ($lines as $line) {
@@ -34,196 +34,29 @@ function readTsvFile($filepath)
     return $data;
 }
 
-function writeTsvFile($filepath, $data)
-{
-    $fp = fopen($filepath, "w");
-
-    if (!$fp) {
-        return false;
-    }
-
-    fwrite($fp, "\xEF\xBB\xBF");
-
-    foreach ($data as $row) {
-        $cleanRow = [];
-
-        foreach ($row as $cell) {
-            $cleanRow[] = str_replace(["\t", "\r", "\n"], " ", $cell);
-        }
-
-        fwrite($fp, implode("\t", $cleanRow) . "\n");
-    }
-
-    fclose($fp);
-    return true;
-}
-
-function rowToString($row)
-{
-    return implode("\t", $row);
-}
-
-function syncDetailToSummary($oldData, $newData)
-{
-    $summaryFile = "results/results.tsv";
-
-    if (!file_exists($summaryFile)) {
-        return;
-    }
-
-    $summaryData = readTsvFile($summaryFile);
-
-    if (empty($summaryData)) {
-        return;
-    }
-
-    $header = $summaryData[0];
-    $summaryRows = array_slice($summaryData, 1);
-
-    $oldRows = array_slice($oldData, 1);
-    $newRows = array_slice($newData, 1);
-
-    $replaceMap = [];
-
-    foreach ($oldRows as $index => $oldRow) {
-        if (isset($newRows[$index])) {
-            $replaceMap[rowToString($oldRow)] = $newRows[$index];
-        }
-    }
-
-    $updatedRows = [];
-
-    foreach ($summaryRows as $row) {
-        $key = rowToString($row);
-
-        if (isset($replaceMap[$key])) {
-            $updatedRows[] = $replaceMap[$key];
-        } else {
-            $updatedRows[] = $row;
-        }
-    }
-
-    $finalData = array_merge([$header], $updatedRows);
-    writeTsvFile($summaryFile, $finalData);
-}
-
-function syncSummaryToDetails($oldData, $newData)
-{
-    $resultsDir = "results/";
-
-    if (!is_dir($resultsDir)) {
-        return;
-    }
-
-    $oldRows = array_slice($oldData, 1);
-    $newRows = array_slice($newData, 1);
-
-    $replaceMap = [];
-
-    foreach ($oldRows as $index => $oldRow) {
-        if (isset($newRows[$index])) {
-            $replaceMap[rowToString($oldRow)] = $newRows[$index];
-        }
-    }
-
-    $fileList = scandir($resultsDir);
-
-    foreach ($fileList as $file) {
-        if ($file === "." || $file === ".." || $file === "results.tsv") {
-            continue;
-        }
-
-        if (!preg_match('/^\d{8}_\d{6}_.+\.tsv$/', $file)) {
-            continue;
-        }
-
-        $filepath = $resultsDir . $file;
-
-        if (!is_file($filepath)) {
-            continue;
-        }
-
-        $detailData = readTsvFile($filepath);
-
-        if (empty($detailData)) {
-            continue;
-        }
-
-        $changed = false;
-        $header = $detailData[0];
-        $rows = array_slice($detailData, 1);
-        $updatedRows = [];
-
-        foreach ($rows as $row) {
-            $key = rowToString($row);
-
-            if (isset($replaceMap[$key])) {
-                $updatedRows[] = $replaceMap[$key];
-                $changed = true;
-            } else {
-                $updatedRows[] = $row;
-            }
-        }
-
-        if ($changed) {
-            $finalData = array_merge([$header], $updatedRows);
-            writeTsvFile($filepath, $finalData);
-        }
-    }
-}
-
-$file = $_GET['file'] ?? $_POST['file'] ?? "";
+$file = $_GET['file'] ?? '';
 $file = basename($file);
-
-$filepath = "results/" . $file;
+$filepath = $resultsDir . $file;
 
 if (!file_exists($filepath) || !is_file($filepath)) {
-    die("File không tồn tại.");
+    die("File không tồn tại!");
 }
 
-if (strpos(realpath($filepath), realpath("results/")) !== 0) {
-    die("Quyền truy cập bị từ chối.");
+if (strpos(realpath($filepath), realpath($resultsDir)) !== 0) {
+    die("Quyền truy cập bị từ chối!");
 }
 
-$message = "";
-$error = "";
+$content = removeBom(file_get_contents($filepath));
+$data = readTsvFile($filepath);
 
-$oldData = readTsvFile($filepath);
-$data = $oldData;
+if (isset($_GET['export']) && $_GET['export'] === '1') {
+    header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $file . '"');
+    header('Cache-Control: must-revalidate, max-age=0');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $postedData = $_POST['data'] ?? [];
-
-    if (empty($postedData)) {
-        $error = "Không có dữ liệu để lưu.";
-    } else {
-        $newData = [];
-
-        foreach ($postedData as $row) {
-            $newRow = [];
-
-            foreach ($row as $cell) {
-                $newRow[] = trim($cell);
-            }
-
-            $newData[] = $newRow;
-        }
-
-        $saved = writeTsvFile($filepath, $newData);
-
-        if ($saved) {
-            if ($file === "results.tsv") {
-                syncSummaryToDetails($oldData, $newData);
-            } else {
-                syncDetailToSummary($oldData, $newData);
-            }
-
-            $message = "Đã lưu và đồng bộ dữ liệu thành công.";
-            $data = readTsvFile($filepath);
-        } else {
-            $error = "Không thể ghi file. Vui lòng kiểm tra quyền thư mục results.";
-        }
-    }
+    echo "\xEF\xBB\xBF";
+    echo $content;
+    exit();
 }
 ?>
 <!DOCTYPE html>
@@ -231,9 +64,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <head>
     <meta charset="UTF-8">
-    <title>Chỉnh sửa file - <?php echo htmlspecialchars($file); ?></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo htmlspecialchars($file); ?> - Dashboard</title>
     <style>
         * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
         }
 
@@ -241,42 +77,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-family: Arial, sans-serif;
             background: #f5f5f5;
             color: #333;
-            margin: 0;
         }
 
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
-        .header-inner {
-            max-width: 1500px;
+        .header .container {
+            max-width: 1400px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
-            gap: 15px;
             align-items: center;
+            gap: 15px;
         }
 
         .header h1 {
             font-size: 20px;
-            margin: 0;
             word-break: break-word;
         }
 
         .header a {
             color: white;
-            text-decoration: none;
+            background-color: rgba(255, 255, 255, 0.2);
             border: 1px solid white;
-            padding: 8px 14px;
+            padding: 8px 16px;
             border-radius: 5px;
-            background: rgba(255, 255, 255, 0.2);
+            text-decoration: none;
             white-space: nowrap;
         }
 
         .container {
-            max-width: 1500px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -285,214 +120,169 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .notice {
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-        }
-
-        .success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .toolbar {
             display: flex;
             gap: 10px;
-            flex-wrap: wrap;
             margin-bottom: 15px;
+            flex-wrap: wrap;
         }
 
-        .btn {
+        .toolbar a,
+        .toolbar button {
+            background-color: #667eea;
+            color: white;
             border: none;
             padding: 10px 16px;
             border-radius: 5px;
             cursor: pointer;
             text-decoration: none;
-            display: inline-block;
             font-size: 14px;
         }
 
-        .save-btn {
-            background: #28a745;
-            color: white;
+        .toolbar .edit-btn {
+            background-color: #ffc107;
+            color: #333;
         }
 
-        .back-btn {
-            background: #6c757d;
-            color: white;
+        .file-info {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 15px;
+            line-height: 1.6;
         }
 
-        .view-btn {
-            background: #17a2b8;
-            color: white;
-        }
-
-        .table-wrap {
+        .data-table {
             overflow-x: auto;
-            max-height: 75vh;
-            border: 1px solid #ddd;
         }
 
         table {
-            border-collapse: collapse;
             width: max-content;
             min-width: 100%;
+            border-collapse: collapse;
             font-size: 12px;
+            table-layout: auto;
         }
 
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 6px;
-            vertical-align: top;
-        }
-
-        th {
-            background: #f8f9fa;
+        table thead {
+            background-color: #f8f9fa;
             position: sticky;
             top: 0;
-            z-index: 5;
-            min-width: 120px;
+            z-index: 10;
+        }
+
+        table th {
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+            border-bottom: 2px solid #ddd;
+            background-color: #f8f9fa;
+            min-width: 110px;
+        }
+
+        table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            max-width: 320px;
+        }
+
+        table tr:hover {
+            background-color: #f8f9fa;
         }
 
         .row-number {
-            background: #f0f0f0;
-            font-weight: bold;
+            background-color: #f0f0f0;
             text-align: center;
+            font-weight: bold;
+            width: 45px;
             min-width: 45px;
             position: sticky;
             left: 0;
-            z-index: 4;
+            z-index: 5;
         }
 
         th.row-number {
-            z-index: 6;
+            z-index: 11;
         }
 
-        textarea {
-            width: 180px;
-            min-height: 70px;
-            resize: vertical;
-            font-family: Arial, sans-serif;
+        .role-note {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: #e9ecef;
+            color: #333;
             font-size: 12px;
-            padding: 6px;
+            margin-left: 5px;
         }
 
-        .wide textarea {
-            width: 260px;
-            min-height: 90px;
-        }
-
-        .small textarea {
-            width: 100px;
-            min-height: 55px;
+        .empty-message {
+            color: #999;
+            padding: 20px;
+            text-align: center;
         }
     </style>
 </head>
 
 <body>
     <div class="header">
-        <div class="header-inner">
-            <h1>✏️ Chỉnh sửa file: <?php echo htmlspecialchars($file); ?></h1>
-            <a href="dashboard.php">← Dashboard</a>
+        <div class="container">
+            <h1>📄 <?php echo htmlspecialchars($file); ?></h1>
+            <a href="dashboard.php">← Quay lại Dashboard</a>
         </div>
     </div>
 
     <div class="container">
         <div class="section">
-            <?php if ($message): ?>
-                <div class="notice success"><?php echo htmlspecialchars($message); ?></div>
-            <?php endif; ?>
+            <div class="toolbar">
+                <a href="?file=<?php echo urlencode($file); ?>&export=1">⬇️ Tải xuống Excel</a>
+                <a href="?file=<?php echo urlencode($file); ?>" onclick="window.print(); return false;">🖨️ In</a>
 
-            <?php if ($error): ?>
-                <div class="notice error"><?php echo htmlspecialchars($error); ?></div>
-            <?php endif; ?>
-
-            <div class="notice info">
-                Bạn đang sửa trực tiếp file TSV. Khi lưu:
-                <strong>
-                    <?php echo $file === "results.tsv" ? "file tổng hợp sẽ đồng bộ ngược sang các file chi tiết tương ứng." : "file chi tiết sẽ đồng bộ lên results.tsv."; ?>
-                </strong>
+                <?php if ($canEdit && $file !== 'results.tsv'): ?>
+                    <a class="edit-btn" href="edit_file.php?file=<?php echo urlencode($file); ?>">✏️ Chỉnh sửa</a>
+                <?php endif; ?>
             </div>
 
-            <div class="toolbar">
-                <button type="submit" form="editForm" class="btn save-btn">💾 Lưu thay đổi</button>
-                <a href="view_file.php?file=<?php echo urlencode($file); ?>" class="btn view-btn">👁️ Xem file</a>
-                <a href="dashboard.php" class="btn back-btn">← Quay lại</a>
+            <div class="file-info">
+                📁 <strong><?php echo htmlspecialchars($file); ?></strong>
+                <?php if ($canEdit): ?>
+                    <span class="role-note">Tài khoản có quyền sửa</span>
+                <?php else: ?>
+                    <span class="role-note">Chỉ xem</span>
+                <?php endif; ?>
+                <br>
+                📊 Tổng <?php echo max(count($data) - 1, 0); ?> dòng dữ liệu |
+                ⏰ Cập nhật: <?php echo date('d/m/Y H:i:s', filemtime($filepath)); ?>
             </div>
 
             <?php if (empty($data)): ?>
-                <p>File không có dữ liệu.</p>
+                <div class="empty-message">File không có dữ liệu.</div>
             <?php else: ?>
-                <form method="POST" id="editForm">
-                    <input type="hidden" name="file" value="<?php echo htmlspecialchars($file); ?>">
-
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="row-number">#</th>
+                                <?php foreach ($data[0] as $header): ?>
+                                    <th><?php echo htmlspecialchars($header); ?></th>
+                                <?php endforeach; ?>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach (array_slice($data, 1) as $index => $row): ?>
                                 <tr>
-                                    <th class="row-number">#</th>
+                                    <td class="row-number"><?php echo $index + 1; ?></td>
                                     <?php foreach ($data[0] as $colIndex => $header): ?>
-                                        <th><?php echo htmlspecialchars($header); ?></th>
+                                        <td><?php echo htmlspecialchars($row[$colIndex] ?? ""); ?></td>
                                     <?php endforeach; ?>
                                 </tr>
-                            </thead>
-
-                            <tbody>
-                                <?php foreach ($data as $rowIndex => $row): ?>
-                                    <tr>
-                                        <td class="row-number">
-                                            <?php echo $rowIndex === 0 ? "Header" : $rowIndex; ?>
-                                        </td>
-
-                                        <?php foreach ($data[0] as $colIndex => $header): ?>
-                                            <?php
-                                            $value = $row[$colIndex] ?? "";
-                                            $headerLower = mb_strtolower($header, 'UTF-8');
-
-                                            $class = "";
-
-                                            if (
-                                                strpos($headerLower, "câu hỏi") !== false ||
-                                                strpos($headerLower, "chú thích") !== false ||
-                                                strpos($headerLower, "minh chứng") !== false
-                                            ) {
-                                                $class = "wide";
-                                            } elseif (
-                                                strpos($headerLower, "đt") !== false ||
-                                                strpos($headerLower, "điểm") !== false ||
-                                                strpos($headerLower, "trọng số") !== false
-                                            ) {
-                                                $class = "small";
-                                            }
-                                            ?>
-                                            <td class="<?php echo $class; ?>">
-                                                <textarea name="data[<?php echo $rowIndex; ?>][<?php echo $colIndex; ?>]"><?php echo htmlspecialchars($value); ?></textarea>
-                                            </td>
-                                        <?php endforeach; ?>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </form>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
         </div>
     </div>

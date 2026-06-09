@@ -8,32 +8,83 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 
 $canEdit = isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'editor';
 
-// Xử lý tải file
-if (isset($_GET['download'])) {
-    $file = basename($_GET['download']);
-    $filepath = "results/" . $file;
+$resultsDir = "results/";
+$summaryFile = $resultsDir . "results.tsv";
 
-    if (file_exists($filepath) && strpos(realpath($filepath), realpath("results/")) === 0) {
-        header('Content-Description: File Transfer');
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="' . $file . '"');
-        header('Content-Length: ' . filesize($filepath));
-        readfile($filepath);
-        exit();
-    }
+function removeBom($content)
+{
+    return substr($content, 0, 3) === "\xEF\xBB\xBF" ? substr($content, 3) : $content;
 }
 
-$summaryFile = "results/results.tsv";
+function readTsvFile($filepath)
+{
+    if (!file_exists($filepath) || !is_file($filepath)) {
+        return [];
+    }
 
-$resultsDir = "results/";
-$files = [];
-$latestFilesByOrg = [];
+    $content = removeBom(file_get_contents($filepath));
+    $lines = explode("\n", $content);
+    $data = [];
 
-if (is_dir($resultsDir)) {
-    $fileList = scandir($resultsDir);
+    foreach ($lines as $line) {
+        if (trim($line) !== "") {
+            $data[] = explode("\t", $line);
+        }
+    }
 
-    foreach ($fileList as $file) {
-        if ($file === '.' || $file === '..') {
+    return $data;
+}
+
+function writeTsvFile($filepath, $data)
+{
+    $fp = fopen($filepath, "w");
+
+    if (!$fp) {
+        return false;
+    }
+
+    fwrite($fp, "\xEF\xBB\xBF");
+
+    foreach ($data as $row) {
+        $cleanRow = [];
+
+        foreach ($row as $cell) {
+            $cleanRow[] = str_replace(["\t", "\r", "\n"], " ", $cell);
+        }
+
+        fwrite($fp, implode("\t", $cleanRow) . "\n");
+    }
+
+    fclose($fp);
+    return true;
+}
+
+function parseDetailFilename($file)
+{
+    if ($file === "results.tsv") {
+        return null;
+    }
+
+    if (!preg_match('/^(\d{8}_\d{6})_(.+)\.tsv$/u', $file, $matches)) {
+        return null;
+    }
+
+    return [
+        'timestamp' => $matches[1],
+        'unit' => $matches[2]
+    ];
+}
+
+function getLatestDetailFiles($resultsDir)
+{
+    $latest = [];
+
+    if (!is_dir($resultsDir)) {
+        return [];
+    }
+
+    foreach (scandir($resultsDir) as $file) {
+        if ($file === "." || $file === ".." || $file === "results.tsv") {
             continue;
         }
 
@@ -43,102 +94,175 @@ if (is_dir($resultsDir)) {
             continue;
         }
 
-        if ($file === 'results.tsv') {
-            $files[] = [
-                'name' => $file,
-                'size' => filesize($filepath),
-                'time' => filemtime($filepath),
-                'timestamp' => date('Ymd_His', filemtime($filepath)),
-                'modified' => date('d/m/Y H:i:s', filemtime($filepath))
-            ];
+        $parsed = parseDetailFilename($file);
+
+        if ($parsed === null) {
             continue;
         }
 
-        if (!preg_match('/^(\d{8}_\d{6})_(.+)\.tsv$/', $file, $matches)) {
-            continue;
-        }
-
-        $timestamp = $matches[1];
-        $orgKey = $matches[2];
+        $unit = $parsed['unit'];
+        $timestamp = $parsed['timestamp'];
 
         if (
-            !isset($latestFilesByOrg[$orgKey]) ||
-            $timestamp > $latestFilesByOrg[$orgKey]['timestamp']
+            !isset($latest[$unit]) ||
+            $timestamp > $latest[$unit]['timestamp']
         ) {
-            $latestFilesByOrg[$orgKey] = [
+            $latest[$unit] = [
                 'name' => $file,
+                'unit' => $unit,
+                'timestamp' => $timestamp,
                 'size' => filesize($filepath),
                 'time' => filemtime($filepath),
-                'timestamp' => $timestamp,
                 'modified' => date('d/m/Y H:i:s', filemtime($filepath))
             ];
         }
     }
 
-    foreach ($latestFilesByOrg as $fileInfo) {
-        $files[] = $fileInfo;
-    }
+    $files = array_values($latest);
 
     usort($files, function ($a, $b) {
-        if ($a['name'] === 'results.tsv') {
-            return -1;
-        }
-
-        if ($b['name'] === 'results.tsv') {
-            return 1;
-        }
-
         return strcmp($b['timestamp'], $a['timestamp']);
     });
+
+    return $files;
 }
 
-$summaryData = [];
-$summaryRows = 0;
-$uniqueOrganizations = 0;
-$detailFilesCount = 0;
+function rebuildSummaryFile($resultsDir, $summaryFile, $latestDetailFiles)
+{
+    $summaryData = [];
+    $headerSet = false;
 
-if (file_exists($summaryFile)) {
-    $content = file_get_contents($summaryFile);
+    foreach ($latestDetailFiles as $fileInfo) {
+        $filepath = $resultsDir . $fileInfo['name'];
+        $data = readTsvFile($filepath);
 
-    if (substr($content, 0, 3) === "\xEF\xBB\xBF") {
-        $content = substr($content, 3);
-    }
+        if (empty($data)) {
+            continue;
+        }
 
-    $lines = explode("\n", $content);
+        if (!$headerSet) {
+            $summaryData[] = $data[0];
+            $headerSet = true;
+        }
 
-    $summaryRows = count(array_filter($lines, function ($line) {
-        return trim($line) !== "";
-    })) - 1;
-
-    $organizations = [];
-
-    for ($i = 1; $i < count($lines); $i++) {
-        if (!empty(trim($lines[$i]))) {
-            $parts = explode("\t", $lines[$i]);
-
-            if (isset($parts[1]) && !empty(trim($parts[1]))) {
-                $org = trim($parts[1]);
-                $organizations[$org] = true;
+        for ($i = 1; $i < count($data); $i++) {
+            if (!empty($data[$i])) {
+                $summaryData[] = $data[$i];
             }
         }
     }
 
-    $uniqueOrganizations = count($organizations);
+    if (!$headerSet) {
+        $summaryData[] = [
+            "Thời gian",
+            "Tổ chức",
+            "Chức năng",
+            "Trọng số",
+            "Đt1",
+            "Đt2",
+            "Đt3",
+            "Đt4",
+            "ĐT",
+            "Điểm quy đổi",
+            "Tổng E",
+            "Xếp loại",
+            "Nhóm",
+            "Câu hỏi",
+            "Có/Không",
+            "Điểm câu hỏi",
+            "Chú thích",
+            "Minh chứng"
+        ];
+    }
 
-    $displayLines = array_slice($lines, max(0, count($lines) - 11), 11);
+    return writeTsvFile($summaryFile, $summaryData);
+}
 
-    foreach ($displayLines as $line) {
-        if (!empty(trim($line))) {
-            $summaryData[] = explode("\t", $line);
+function shouldRebuildSummary($resultsDir, $summaryFile, $latestDetailFiles)
+{
+    if (!file_exists($summaryFile)) {
+        return true;
+    }
+
+    $summaryTime = filemtime($summaryFile);
+
+    foreach ($latestDetailFiles as $fileInfo) {
+        $detailPath = $resultsDir . $fileInfo['name'];
+
+        if (
+            file_exists($detailPath) &&
+            filemtime($detailPath) > $summaryTime
+        ) {
+            return true;
         }
     }
+
+    $summaryData = readTsvFile($summaryFile);
+    $summaryUnits = [];
+
+    for ($i = 1; $i < count($summaryData); $i++) {
+        if (
+            isset($summaryData[$i][1]) &&
+            trim($summaryData[$i][1]) !== ""
+        ) {
+            $summaryUnits[trim($summaryData[$i][1])] = true;
+        }
+    }
+
+    if (count($summaryUnits) !== count($latestDetailFiles)) {
+        return true;
+    }
+
+    return false;
 }
 
-foreach ($files as $file) {
-    if ($file['name'] !== 'results.tsv') {
-        $detailFilesCount++;
+if (!is_dir($resultsDir)) {
+    mkdir($resultsDir, 0777, true);
+}
+
+$latestDetailFiles = getLatestDetailFiles($resultsDir);
+
+if (shouldRebuildSummary($resultsDir, $summaryFile, $latestDetailFiles)) {
+    rebuildSummaryFile($resultsDir, $summaryFile, $latestDetailFiles);
+}
+
+if (isset($_GET['download'])) {
+    $file = basename($_GET['download']);
+    $filepath = $resultsDir . $file;
+
+    if (
+        file_exists($filepath) &&
+        is_file($filepath) &&
+        strpos(realpath($filepath), realpath($resultsDir)) === 0
+    ) {
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="' . $file . '"');
+        header('Content-Length: ' . filesize($filepath));
+        readfile($filepath);
+        exit();
     }
 }
+
+$files = [];
+
+if (file_exists($summaryFile)) {
+    $files[] = [
+        'name' => 'results.tsv',
+        'unit' => 'File tổng hợp',
+        'timestamp' => date('Ymd_His', filemtime($summaryFile)),
+        'size' => filesize($summaryFile),
+        'time' => filemtime($summaryFile),
+        'modified' => date('d/m/Y H:i:s', filemtime($summaryFile))
+    ];
+}
+
+foreach ($latestDetailFiles as $fileInfo) {
+    $files[] = $fileInfo;
+}
+
+$uniqueOrganizations = count($latestDetailFiles);
+$detailFilesCount = count($latestDetailFiles);
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -192,11 +316,6 @@ foreach ($files as $file) {
             padding: 8px 16px;
             border-radius: 5px;
             cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        .header .logout-btn:hover {
-            background-color: rgba(255, 255, 255, 0.3);
         }
 
         .container {
@@ -291,6 +410,7 @@ foreach ($files as $file) {
             border-radius: 5px;
             margin-bottom: 15px;
             border: 1px solid #bee5eb;
+            line-height: 1.6;
         }
 
         .view-btn,
@@ -324,6 +444,12 @@ foreach ($files as $file) {
             border-radius: 20px;
             background: rgba(255, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .unit-name {
+            color: #555;
+            font-size: 12px;
+            margin-top: 4px;
         }
     </style>
 </head>
@@ -366,10 +492,8 @@ foreach ($files as $file) {
         <div class="section">
             <h2>📁 Danh sách file kết quả</h2>
             <div class="info-box">
-                💡 Danh sách chỉ hiển thị <strong>file tổng hợp</strong> và <strong>file chi tiết mới nhất của mỗi đơn vị</strong>.
-                <?php if ($canEdit): ?>
-                    Tài khoản hiện tại có quyền <strong>sửa dữ liệu</strong>.
-                <?php endif; ?>
+                💡 Dashboard chỉ tạo lại <strong>results.tsv</strong> khi cần: khi có file chi tiết mới, file chi tiết được sửa, số đơn vị thay đổi hoặc file tổng hợp bị mất.<br>
+                Danh sách bên dưới hiển thị <strong>file tổng hợp</strong> ở đầu và <strong>file chi tiết mới nhất của mỗi đơn vị</strong>.
             </div>
 
             <?php if (empty($files)): ?>
@@ -387,14 +511,21 @@ foreach ($files as $file) {
                     <tbody>
                         <?php foreach ($files as $file): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($file['name']); ?></td>
+                                <td>
+                                    <?php echo htmlspecialchars($file['name']); ?>
+                                    <?php if ($file['name'] !== 'results.tsv'): ?>
+                                        <div class="unit-name">
+                                            Đơn vị: <?php echo htmlspecialchars($file['unit']); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="file-size"><?php echo number_format($file['size'], 0) . ' bytes'; ?></td>
                                 <td><?php echo $file['modified']; ?></td>
                                 <td>
                                     <a href="view_file.php?file=<?php echo urlencode($file['name']); ?>" class="view-btn">Xem</a>
                                     <a href="?download=<?php echo urlencode($file['name']); ?>" class="download-btn">Tải xuống</a>
 
-                                    <?php if ($canEdit): ?>
+                                    <?php if ($canEdit && $file['name'] !== 'results.tsv'): ?>
                                         <a href="edit_file.php?file=<?php echo urlencode($file['name']); ?>" class="edit-btn">Sửa</a>
                                     <?php endif; ?>
                                 </td>

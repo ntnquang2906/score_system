@@ -366,6 +366,34 @@ function calculateQuestionScore($q, $answer)
     }
 }
 
+function normalizeVietnameseKeepCase($text)
+{
+    $map = [
+        'à'=>'a','á'=>'a','ạ'=>'a','ả'=>'a','ã'=>'a','â'=>'a','ầ'=>'a','ấ'=>'a','ậ'=>'a','ẩ'=>'a','ẫ'=>'a','ă'=>'a','ằ'=>'a','ắ'=>'a','ặ'=>'a','ẳ'=>'a','ẵ'=>'a',
+        'è'=>'e','é'=>'e','ẹ'=>'e','ẻ'=>'e','ẽ'=>'e','ê'=>'e','ề'=>'e','ế'=>'e','ệ'=>'e','ể'=>'e','ễ'=>'e',
+        'ì'=>'i','í'=>'i','ị'=>'i','ỉ'=>'i','ĩ'=>'i',
+        'ò'=>'o','ó'=>'o','ọ'=>'o','ỏ'=>'o','õ'=>'o','ô'=>'o','ồ'=>'o','ố'=>'o','ộ'=>'o','ổ'=>'o','ỗ'=>'o','ơ'=>'o','ờ'=>'o','ớ'=>'o','ợ'=>'o','ở'=>'o','ỡ'=>'o',
+        'ù'=>'u','ú'=>'u','ụ'=>'u','ủ'=>'u','ũ'=>'u','ư'=>'u','ừ'=>'u','ứ'=>'u','ự'=>'u','ử'=>'u','ữ'=>'u',
+        'ỳ'=>'y','ý'=>'y','ỵ'=>'y','ỷ'=>'y','ỹ'=>'y','đ'=>'d',
+
+        'À'=>'A','Á'=>'A','Ạ'=>'A','Ả'=>'A','Ã'=>'A','Â'=>'A','Ầ'=>'A','Ấ'=>'A','Ậ'=>'A','Ẩ'=>'A','Ẫ'=>'A','Ă'=>'A','Ằ'=>'A','Ắ'=>'A','Ặ'=>'A','Ẳ'=>'A','Ẵ'=>'A',
+        'È'=>'E','É'=>'E','Ẹ'=>'E','Ẻ'=>'E','Ẽ'=>'E','Ê'=>'E','Ề'=>'E','Ế'=>'E','Ệ'=>'E','Ể'=>'E','Ễ'=>'E',
+        'Ì'=>'I','Í'=>'I','Ị'=>'I','Ỉ'=>'I','Ĩ'=>'I',
+        'Ò'=>'O','Ó'=>'O','Ọ'=>'O','Ỏ'=>'O','Õ'=>'O','Ô'=>'O','Ồ'=>'O','Ố'=>'O','Ộ'=>'O','Ổ'=>'O','Ỗ'=>'O','Ơ'=>'O','Ờ'=>'O','Ớ'=>'O','Ợ'=>'O','Ở'=>'O','Ỡ'=>'O',
+        'Ù'=>'U','Ú'=>'U','Ụ'=>'U','Ủ'=>'U','Ũ'=>'U','Ư'=>'U','Ừ'=>'U','Ứ'=>'U','Ự'=>'U','Ử'=>'U','Ữ'=>'U',
+        'Ỳ'=>'Y','Ý'=>'Y','Ỵ'=>'Y','Ỷ'=>'Y','Ỹ'=>'Y','Đ'=>'D'
+    ];
+
+    $text = trim($text);
+    $text = strtr($text, $map);
+    $text = preg_replace('/[\/\\\\:\*\?"<>\|]+/u', '_', $text);
+    $text = preg_replace('/[\s\-,;]+/u', '_', $text);
+    $text = preg_replace('/[^A-Za-z0-9_.]+/u', '_', $text);
+    $text = preg_replace('/_+/u', '_', $text);
+
+    return trim($text, '._');
+}
+
 function hasUploadedEvidence($funcKey, $questionId)
 {
     $key = "evidence_" . $funcKey . "_" . $questionId;
@@ -387,21 +415,23 @@ function hasUploadedEvidence($funcKey, $questionId)
     return false;
 }
 
-function uploadEvidenceFiles($funcKey, $questionId)
+function uploadEvidenceFiles($funcKey, $questionId, $orgSafe)
 {
     $key = "evidence_" . $funcKey . "_" . $questionId;
     $saved = [];
 
     if (!isset($_FILES[$key])) return "";
 
-    if (!is_dir("uploads")) {
-        if (!mkdir("uploads", 0777, true)) {
-            return "[Không thể tạo thư mục uploads]";
+    $uploadDir = "uploads/" . $orgSafe;
+
+    if (!is_dir($uploadDir)) {
+        if (!mkdir($uploadDir, 0777, true)) {
+            return "[Không thể tạo thư mục uploads/" . $orgSafe . "]";
         }
     }
 
-    if (!is_writable("uploads")) {
-        return "[Thư mục uploads không có quyền ghi]";
+    if (!is_writable($uploadDir)) {
+        return "[Thư mục uploads/" . $orgSafe . " không có quyền ghi]";
     }
 
     foreach ($_FILES[$key]['name'] as $idx => $name) {
@@ -412,9 +442,10 @@ function uploadEvidenceFiles($funcKey, $questionId)
         }
 
         $tmp = $_FILES[$key]['tmp_name'][$idx];
-        $safe = preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($name));
-        $filename = date("Ymd_His") . "_" . uniqid() . "_" . $safe;
-        $target = "uploads/" . $filename;
+
+        $safeOriginalName = normalizeVietnameseKeepCase(basename($name));
+        $filename = date("Ymd_His") . "_" . uniqid() . "_" . $safeOriginalName;
+        $target = $uploadDir . "/" . $filename;
 
         if (move_uploaded_file($tmp, $target)) {
             $saved[] = $target;
@@ -444,36 +475,6 @@ function buildEvidenceValue($evidenceText, $uploadedFiles)
     return implode(" | ", $parts);
 }
 
-function slugify($text)
-{
-    if (function_exists('transliterator_transliterate')) {
-        $text = transliterator_transliterate('Any-Latin; Latin-ASCII;', $text);
-    } else {
-        $vietnamese = array(
-            'à' => 'a', 'á' => 'a', 'ả' => 'a', 'ã' => 'a', 'ạ' => 'a',
-            'ă' => 'a', 'ằ' => 'a', 'ắ' => 'a', 'ẳ' => 'a', 'ẵ' => 'a', 'ặ' => 'a',
-            'â' => 'a', 'ầ' => 'a', 'ấ' => 'a', 'ẩ' => 'a', 'ẫ' => 'a', 'ậ' => 'a',
-            'đ' => 'd',
-            'è' => 'e', 'é' => 'e', 'ẻ' => 'e', 'ẽ' => 'e', 'ẹ' => 'e',
-            'ê' => 'e', 'ề' => 'e', 'ế' => 'e', 'ể' => 'e', 'ễ' => 'e', 'ệ' => 'e',
-            'ì' => 'i', 'í' => 'i', 'ỉ' => 'i', 'ĩ' => 'i', 'ị' => 'i',
-            'ò' => 'o', 'ó' => 'o', 'ỏ' => 'o', 'õ' => 'o', 'ọ' => 'o',
-            'ô' => 'o', 'ồ' => 'o', 'ố' => 'o', 'ổ' => 'o', 'ỗ' => 'o', 'ộ' => 'o',
-            'ơ' => 'o', 'ờ' => 'o', 'ớ' => 'o', 'ở' => 'o', 'ỡ' => 'o', 'ợ' => 'o',
-            'ù' => 'u', 'ú' => 'u', 'ủ' => 'u', 'ũ' => 'u', 'ụ' => 'u',
-            'ư' => 'u', 'ừ' => 'u', 'ứ' => 'u', 'ử' => 'u', 'ữ' => 'u', 'ự' => 'u',
-            'ỳ' => 'y', 'ý' => 'y', 'ỷ' => 'y', 'ỹ' => 'y', 'ỵ' => 'y'
-        );
-        $text = str_replace(array_keys($vietnamese), array_values($vietnamese), $text);
-    }
-
-    $text = strtolower($text);
-    $text = preg_replace('/[^a-z0-9]+/', '_', $text);
-    $text = trim($text, '_');
-
-    return $text;
-}
-
 function saveToExcel($organization, $results, $totalE, $rank)
 {
     if (!is_dir("results")) {
@@ -488,7 +489,11 @@ function saveToExcel($organization, $results, $totalE, $rank)
 
     $time = date("Y-m-d H:i:s");
     $timestamp = date("Ymd_His");
-    $orgSafe = slugify($organization);
+    $orgSafe = normalizeVietnameseKeepCase($organization);
+
+    if ($orgSafe === "") {
+        return ["error" => "Tên đơn vị không hợp lệ để tạo file."];
+    }
 
     $downloadFile = "results/" . $timestamp . "_" . $orgSafe . ".tsv";
     $fpDownload = fopen($downloadFile, "w");
@@ -529,84 +534,6 @@ function saveToExcel($organization, $results, $totalE, $rank)
 
     fclose($fpDownload);
 
-    $summaryFile = "results/results.tsv";
-    $isNew = !file_exists($summaryFile);
-
-    $existingLines = [];
-    $headerLine = "";
-
-    if ($isNew) {
-        $headerLine = "Thời gian\tTổ chức\tChức năng\tTrọng số\tĐt1\tĐt2\tĐt3\tĐt4\tĐT\tĐiểm quy đổi\tTổng E\tXếp loại\tNhóm\tCâu hỏi\tCó/Không\tĐiểm câu hỏi\tChú thích\tMinh chứng";
-    } else {
-        $fileContent = file_get_contents($summaryFile);
-
-        if (substr($fileContent, 0, 3) === "\xEF\xBB\xBF") {
-            $fileContent = substr($fileContent, 3);
-        }
-
-        $lines = explode("\n", $fileContent);
-
-        if (!empty($lines)) {
-            $headerLine = array_shift($lines);
-        }
-
-        foreach ($lines as $line) {
-            if (trim($line) === "") continue;
-
-            $columns = explode("\t", $line);
-
-            if (isset($columns[1]) && $columns[1] !== $organization) {
-                $existingLines[] = $line;
-            }
-        }
-    }
-
-    $newLines = [];
-
-    foreach ($results as $r) {
-        foreach ($r['details'] as $d) {
-            $row = [
-                $time,
-                $organization,
-                $r['name'],
-                $r['weight'] * 100 . "%",
-                $r['dt1'],
-                $r['dt2'],
-                $r['dt3'],
-                $r['dt4'],
-                $r['dt'],
-                round($r['weighted'], 2),
-                round($totalE, 2),
-                $rank,
-                $d['group'],
-                $d['question'],
-                $d['yes'] === "1" ? "Có" : "Không",
-                $d['score'],
-                str_replace(["\t", "\n", "\r"], " ", $d['note']),
-                str_replace(["\t", "\n", "\r"], " ", $d['evidence'])
-            ];
-
-            $newLines[] = implode("\t", $row);
-        }
-    }
-
-    $fpSummary = fopen($summaryFile, "w");
-
-    if ($fpSummary) {
-        fwrite($fpSummary, "\xEF\xBB\xBF");
-        fwrite($fpSummary, $headerLine . "\n");
-
-        foreach ($existingLines as $line) {
-            fwrite($fpSummary, $line . "\n");
-        }
-
-        foreach ($newLines as $line) {
-            fwrite($fpSummary, $line . "\n");
-        }
-
-        fclose($fpSummary);
-    }
-
     return ["success" => true, "file" => $downloadFile];
 }
 
@@ -620,6 +547,12 @@ $evidenceTexts = $_POST['evidence_text'] ?? [];
 
 if (trim($organization) === "") {
     die("Thiếu tên đơn vị đánh giá.");
+}
+
+$orgSafe = normalizeVietnameseKeepCase($organization);
+
+if ($orgSafe === "") {
+    die("Tên đơn vị không hợp lệ.");
 }
 
 if (empty($functions)) {
@@ -708,7 +641,7 @@ foreach ($functions as $funcKey) {
             $score = calculateQuestionScore($q, $answer);
 
             $evidenceText = getEvidenceText($evidenceTexts, $funcKey, $q['id']);
-            $uploadedFiles = uploadEvidenceFiles($funcKey, $q['id']);
+            $uploadedFiles = uploadEvidenceFiles($funcKey, $q['id'], $orgSafe);
             $evidence = buildEvidenceValue($evidenceText, $uploadedFiles);
 
             $dtScores[$group['id']] += $score;

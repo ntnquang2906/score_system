@@ -10,6 +10,8 @@ if (!isset($_SESSION['admin_role']) || $_SESSION['admin_role'] !== 'editor') {
     die("Bạn không có quyền sửa file kết quả.");
 }
 
+$resultsDir = "results/";
+
 function removeBom($content)
 {
     return substr($content, 0, 3) === "\xEF\xBB\xBF" ? substr($content, 3) : $content;
@@ -17,6 +19,10 @@ function removeBom($content)
 
 function readTsvFile($filepath)
 {
+    if (!file_exists($filepath) || !is_file($filepath)) {
+        return [];
+    }
+
     $content = removeBom(file_get_contents($filepath));
     $lines = explode("\n", $content);
     $data = [];
@@ -54,174 +60,111 @@ function writeTsvFile($filepath, $data)
     return true;
 }
 
-function rowToString($row)
+function parseDetailFilename($file)
 {
-    return implode("\t", $row);
+    if (!preg_match('/^(\d{8}_\d{6})_(.+)\.tsv$/u', $file, $matches)) {
+        return null;
+    }
+
+    if ($file === "results.tsv") {
+        return null;
+    }
+
+    return [
+        'timestamp' => $matches[1],
+        'unit' => $matches[2]
+    ];
 }
 
-function safeTsvFilename($filename)
+function normalizeVietnameseKeepCase($text)
 {
-    $filename = basename(trim($filename));
-    $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
+    $map = [
+        'à'=>'a','á'=>'a','ạ'=>'a','ả'=>'a','ã'=>'a','â'=>'a','ầ'=>'a','ấ'=>'a','ậ'=>'a','ẩ'=>'a','ẫ'=>'a','ă'=>'a','ằ'=>'a','ắ'=>'a','ặ'=>'a','ẳ'=>'a','ẵ'=>'a',
+        'è'=>'e','é'=>'e','ẹ'=>'e','ẻ'=>'e','ẽ'=>'e','ê'=>'e','ề'=>'e','ế'=>'e','ệ'=>'e','ể'=>'e','ễ'=>'e',
+        'ì'=>'i','í'=>'i','ị'=>'i','ỉ'=>'i','ĩ'=>'i',
+        'ò'=>'o','ó'=>'o','ọ'=>'o','ỏ'=>'o','õ'=>'o','ô'=>'o','ồ'=>'o','ố'=>'o','ộ'=>'o','ổ'=>'o','ỗ'=>'o','ơ'=>'o','ờ'=>'o','ớ'=>'o','ợ'=>'o','ở'=>'o','ỡ'=>'o',
+        'ù'=>'u','ú'=>'u','ụ'=>'u','ủ'=>'u','ũ'=>'u','ư'=>'u','ừ'=>'u','ứ'=>'u','ự'=>'u','ử'=>'u','ữ'=>'u',
+        'ỳ'=>'y','ý'=>'y','ỵ'=>'y','ỷ'=>'y','ỹ'=>'y','đ'=>'d',
 
-    if ($filename === "") {
-        return "";
-    }
+        'À'=>'A','Á'=>'A','Ạ'=>'A','Ả'=>'A','Ã'=>'A','Â'=>'A','Ầ'=>'A','Ấ'=>'A','Ậ'=>'A','Ẩ'=>'A','Ẫ'=>'A','Ă'=>'A','Ằ'=>'A','Ắ'=>'A','Ặ'=>'A','Ẳ'=>'A','Ẵ'=>'A',
+        'È'=>'E','É'=>'E','Ẹ'=>'E','Ẻ'=>'E','Ẽ'=>'E','Ê'=>'E','Ề'=>'E','Ế'=>'E','Ệ'=>'E','Ể'=>'E','Ễ'=>'E',
+        'Ì'=>'I','Í'=>'I','Ị'=>'I','Ỉ'=>'I','Ĩ'=>'I',
+        'Ò'=>'O','Ó'=>'O','Ọ'=>'O','Ỏ'=>'O','Õ'=>'O','Ô'=>'O','Ồ'=>'O','Ố'=>'O','Ộ'=>'O','Ổ'=>'O','Ỗ'=>'O','Ơ'=>'O','Ờ'=>'O','Ớ'=>'O','Ợ'=>'O','Ở'=>'O','Ỡ'=>'O',
+        'Ù'=>'U','Ú'=>'U','Ụ'=>'U','Ủ'=>'U','Ũ'=>'U','Ư'=>'U','Ừ'=>'U','Ứ'=>'U','Ự'=>'U','Ử'=>'U','Ữ'=>'U',
+        'Ỳ'=>'Y','Ý'=>'Y','Ỵ'=>'Y','Ỷ'=>'Y','Ỹ'=>'Y','Đ'=>'D'
+    ];
 
-    if (!str_ends_with(strtolower($filename), ".tsv")) {
-        $filename .= ".tsv";
-    }
+    $text = trim($text);
+    $text = strtr($text, $map);
 
-    return $filename;
-}
+    // Ký tự nguy hiểm cho tên file
+    $text = preg_replace('/[\/\\\\:\*\?"<>\|]+/u', '_', $text);
 
-function syncDetailToSummary($oldData, $newData)
-{
-    $summaryFile = "results/results.tsv";
+    // Các dấu phân cách phổ biến chuyển thành _
+    $text = preg_replace('/[\s\-,;]+/u', '_', $text);
 
-    if (!file_exists($summaryFile)) {
-        return;
-    }
+    // Chỉ giữ chữ, số, dấu gạch dưới, dấu chấm
+    $text = preg_replace('/[^A-Za-z0-9_.]+/u', '_', $text);
 
-    $summaryData = readTsvFile($summaryFile);
+    $text = preg_replace('/_+/u', '_', $text);
+    $text = trim($text, '._');
 
-    if (empty($summaryData)) {
-        return;
-    }
-
-    $header = $summaryData[0];
-    $summaryRows = array_slice($summaryData, 1);
-
-    $oldRows = array_slice($oldData, 1);
-    $newRows = array_slice($newData, 1);
-
-    $replaceMap = [];
-
-    foreach ($oldRows as $index => $oldRow) {
-        if (isset($newRows[$index])) {
-            $replaceMap[rowToString($oldRow)] = $newRows[$index];
-        }
-    }
-
-    $updatedRows = [];
-
-    foreach ($summaryRows as $row) {
-        $key = rowToString($row);
-
-        if (isset($replaceMap[$key])) {
-            $updatedRows[] = $replaceMap[$key];
-        } else {
-            $updatedRows[] = $row;
-        }
-    }
-
-    $finalData = array_merge([$header], $updatedRows);
-    writeTsvFile($summaryFile, $finalData);
-}
-
-function syncSummaryToDetails($oldData, $newData)
-{
-    $resultsDir = "results/";
-
-    if (!is_dir($resultsDir)) {
-        return;
-    }
-
-    $oldRows = array_slice($oldData, 1);
-    $newRows = array_slice($newData, 1);
-
-    $replaceMap = [];
-
-    foreach ($oldRows as $index => $oldRow) {
-        if (isset($newRows[$index])) {
-            $replaceMap[rowToString($oldRow)] = $newRows[$index];
-        }
-    }
-
-    $fileList = scandir($resultsDir);
-
-    foreach ($fileList as $file) {
-        if ($file === "." || $file === ".." || $file === "results.tsv") {
-            continue;
-        }
-
-        if (!preg_match('/^\d{8}_\d{6}_.+\.tsv$/', $file)) {
-            continue;
-        }
-
-        $filepath = $resultsDir . $file;
-
-        if (!is_file($filepath)) {
-            continue;
-        }
-
-        $detailData = readTsvFile($filepath);
-
-        if (empty($detailData)) {
-            continue;
-        }
-
-        $changed = false;
-        $header = $detailData[0];
-        $rows = array_slice($detailData, 1);
-        $updatedRows = [];
-
-        foreach ($rows as $row) {
-            $key = rowToString($row);
-
-            if (isset($replaceMap[$key])) {
-                $updatedRows[] = $replaceMap[$key];
-                $changed = true;
-            } else {
-                $updatedRows[] = $row;
-            }
-        }
-
-        if ($changed) {
-            $finalData = array_merge([$header], $updatedRows);
-            writeTsvFile($filepath, $finalData);
-        }
-    }
+    return $text;
 }
 
 $file = $_GET['file'] ?? $_POST['file'] ?? "";
 $file = basename($file);
 
-$filepath = "results/" . $file;
+if ($file === "results.tsv") {
+    die("Không chỉnh sửa trực tiếp file tổng hợp. File results.tsv được tự động tạo lại từ các file chi tiết.");
+}
+
+$parsed = parseDetailFilename($file);
+
+if ($parsed === null) {
+    die("Tên file không đúng định dạng timestamp_ten_don_vi.tsv.");
+}
+
+$filepath = $resultsDir . $file;
 
 if (!file_exists($filepath) || !is_file($filepath)) {
     die("File không tồn tại.");
 }
 
-if (strpos(realpath($filepath), realpath("results/")) !== 0) {
+if (strpos(realpath($filepath), realpath($resultsDir)) !== 0) {
     die("Quyền truy cập bị từ chối.");
 }
-
-$isSummaryFile = ($file === "results.tsv");
 
 $message = "";
 $error = "";
 
 if (isset($_GET['renamed']) && $_GET['renamed'] === "1") {
-    $message = "Đã đổi tên file thành công.";
+    $message = "Đã đổi tên đơn vị thành công.";
 }
 
-$oldData = readTsvFile($filepath);
-$data = $oldData;
+$data = readTsvFile($filepath);
+$header = $data[0] ?? [];
+$rows = array_slice($data, 1);
+
+$currentUnitName = $parsed['unit'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $postedData = $_POST['data'] ?? [];
+    $postedRows = $_POST['rows'] ?? [];
+    $newUnitInput = $_POST['unit_name'] ?? $currentUnitName;
 
-    if (empty($postedData)) {
-        $error = "Không có dữ liệu để lưu.";
+    $newUnitName = normalizeVietnameseKeepCase($newUnitInput);
+
+    if ($newUnitName === "") {
+        $error = "Tên đơn vị không hợp lệ.";
     } else {
         $newData = [];
+        $newData[] = $header;
 
-        foreach ($postedData as $row) {
+        foreach ($postedRows as $row) {
             $newRow = [];
 
-            foreach ($row as $cell) {
-                $newRow[] = trim($cell);
+            foreach ($header as $colIndex => $colName) {
+                $newRow[] = trim($row[$colIndex] ?? "");
             }
 
             $newData[] = $newRow;
@@ -230,36 +173,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $saved = writeTsvFile($filepath, $newData);
 
         if ($saved) {
-            if ($isSummaryFile) {
-                syncSummaryToDetails($oldData, $newData);
-            } else {
-                syncDetailToSummary($oldData, $newData);
-            }
+            $message = "Đã lưu nội dung file chi tiết thành công.";
 
-            $message = "Đã lưu và đồng bộ dữ liệu thành công.";
-            $data = readTsvFile($filepath);
+            $newFilename = $parsed['timestamp'] . "_" . $newUnitName . ".tsv";
 
-            // Chỉ cho đổi tên file chi tiết, không cho đổi tên results.tsv
-            if (!$isSummaryFile) {
-                $newFilename = safeTsvFilename($_POST['new_filename'] ?? $file);
+            if ($newFilename !== $file) {
+                $newFilepath = $resultsDir . $newFilename;
 
-                if ($newFilename === "") {
-                    $error = "Tên file mới không hợp lệ.";
-                } elseif ($newFilename !== $file) {
-                    $newFilepath = "results/" . $newFilename;
-
-                    if (file_exists($newFilepath)) {
-                        $error = "Tên file mới đã tồn tại. Vui lòng chọn tên khác.";
+                if (file_exists($newFilepath)) {
+                    $error = "Tên file sau khi đổi đã tồn tại: " . $newFilename;
+                } else {
+                    if (rename($filepath, $newFilepath)) {
+                        header("Location: edit_file.php?file=" . urlencode($newFilename) . "&renamed=1");
+                        exit();
                     } else {
-                        if (rename($filepath, $newFilepath)) {
-                            header("Location: edit_file.php?file=" . urlencode($newFilename) . "&renamed=1");
-                            exit();
-                        } else {
-                            $error = "Không thể đổi tên file. Vui lòng kiểm tra quyền thư mục results.";
-                        }
+                        $error = "Không thể đổi tên file. Vui lòng kiểm tra quyền thư mục results.";
                     }
                 }
             }
+
+            $data = readTsvFile($filepath);
+            $header = $data[0] ?? [];
+            $rows = array_slice($data, 1);
+            $currentUnitName = $newUnitName;
         } else {
             $error = "Không thể ghi file. Vui lòng kiểm tra quyền thư mục results.";
         }
@@ -349,6 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: #d1ecf1;
             color: #0c5460;
             border: 1px solid #bee5eb;
+            line-height: 1.6;
         }
 
         .filename-box {
@@ -367,7 +304,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .filename-box input {
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
@@ -473,6 +410,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             width: 100px;
             min-height: 55px;
         }
+
+        .readonly-header {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #333;
+        }
     </style>
 </head>
 
@@ -495,12 +438,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <div class="notice info">
-                Khi lưu:
-                <strong>
-                    <?php echo $isSummaryFile
-                        ? "file tổng hợp chỉ được sửa nội dung, không được đổi tên."
-                        : "file chi tiết sẽ đồng bộ nội dung lên results.tsv. Tên file chi tiết cũng có thể được đổi để đồng nhất tên đơn vị."; ?>
-                </strong>
+                Nguồn dữ liệu gốc là <strong>file chi tiết</strong>. File <strong>results.tsv</strong> sẽ tự động được tạo lại từ các file chi tiết mới nhất khi mở Dashboard.
+                <br>
+                Dòng tiêu đề cột chỉ đọc để tránh làm hỏng cấu trúc file.
             </div>
 
             <?php if (empty($data)): ?>
@@ -510,23 +450,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="hidden" name="file" value="<?php echo htmlspecialchars($file); ?>">
 
                     <div class="filename-box">
-                        <label>Tên file</label>
-
-                        <?php if ($isSummaryFile): ?>
-                            <input type="text" value="<?php echo htmlspecialchars($file); ?>" disabled>
-                            <small>
-                                File <strong>results.tsv</strong> là file tổng hợp hệ thống nên không được đổi tên.
-                            </small>
-                        <?php else: ?>
-                            <input
-                                type="text"
-                                name="new_filename"
-                                value="<?php echo htmlspecialchars($file); ?>">
-                            <small>
-                                Chỉ nên đổi phần tên đơn vị để đồng nhất. Hệ thống sẽ tự giữ/ép đuôi <strong>.tsv</strong>.
-                                Không dùng dấu cách/ký tự đặc biệt; nếu có, hệ thống sẽ tự chuyển thành dấu gạch dưới.
-                            </small>
-                        <?php endif; ?>
+                        <label>Tên đơn vị</label>
+                        <input
+                            type="text"
+                            name="unit_name"
+                            value="<?php echo htmlspecialchars($currentUnitName); ?>">
+                        <small>
+                            Khi lưu, hệ thống sẽ giữ timestamp và chuẩn hóa tên file:
+                            bỏ dấu tiếng Việt, thay khoảng trắng bằng dấu gạch dưới, giữ nguyên hoa/thường.
+                            <br>
+                            Ví dụ: <strong>Viện Công nghệ thông tin</strong> → <strong>Vien_Cong_nghe_thong_tin</strong>
+                        </small>
                     </div>
 
                     <div class="toolbar">
@@ -540,23 +474,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <thead>
                                 <tr>
                                     <th class="row-number">#</th>
-                                    <?php foreach ($data[0] as $header): ?>
-                                        <th><?php echo htmlspecialchars($header); ?></th>
+                                    <?php foreach ($header as $colIndex => $colName): ?>
+                                        <th><?php echo htmlspecialchars($colName); ?></th>
                                     <?php endforeach; ?>
                                 </tr>
                             </thead>
 
                             <tbody>
-                                <?php foreach ($data as $rowIndex => $row): ?>
-                                    <tr>
-                                        <td class="row-number">
-                                            <?php echo $rowIndex === 0 ? "Header" : $rowIndex; ?>
-                                        </td>
+                                <tr class="readonly-header">
+                                    <td class="row-number">Header</td>
+                                    <?php foreach ($header as $colName): ?>
+                                        <td><?php echo htmlspecialchars($colName); ?></td>
+                                    <?php endforeach; ?>
+                                </tr>
 
-                                        <?php foreach ($data[0] as $colIndex => $header): ?>
+                                <?php foreach ($rows as $rowIndex => $row): ?>
+                                    <tr>
+                                        <td class="row-number"><?php echo $rowIndex + 1; ?></td>
+
+                                        <?php foreach ($header as $colIndex => $colName): ?>
                                             <?php
                                             $value = $row[$colIndex] ?? "";
-                                            $headerLower = mb_strtolower($header, 'UTF-8');
+                                            $headerLower = mb_strtolower($colName, 'UTF-8');
 
                                             $class = "";
 
@@ -574,8 +513,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 $class = "small";
                                             }
                                             ?>
+
                                             <td class="<?php echo $class; ?>">
-                                                <textarea name="data[<?php echo $rowIndex; ?>][<?php echo $colIndex; ?>]"><?php echo htmlspecialchars($value); ?></textarea>
+                                                <textarea name="rows[<?php echo $rowIndex; ?>][<?php echo $colIndex; ?>]"><?php echo htmlspecialchars($value); ?></textarea>
                                             </td>
                                         <?php endforeach; ?>
                                     </tr>
