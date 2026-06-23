@@ -492,8 +492,7 @@ $detailFilesCount = count($latestDetailFiles);
         <div class="section">
             <h2>📁 Danh sách file kết quả</h2>
             <div class="info-box">
-                💡 Dashboard chỉ tạo lại <strong>results.tsv</strong> khi cần: khi có file chi tiết mới, file chi tiết được sửa, số đơn vị thay đổi hoặc file tổng hợp bị mất.<br>
-                Danh sách bên dưới hiển thị <strong>file tổng hợp</strong> ở đầu và <strong>file chi tiết mới nhất của mỗi đơn vị</strong>.
+                💡 Dashboard bao gồm <strong>results.tsv</strong> là <strong>file tổng hợp</strong> được xếp ở đầu và <strong>file chi tiết mới nhất của mỗi đơn vị</strong> theo thứ tự thời gian điền.
             </div>
 
             <?php if (empty($files)): ?>

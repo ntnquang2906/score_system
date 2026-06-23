@@ -15,6 +15,10 @@ $accounts = [
     'Sonpb' => [
         'password' => 'Sonvnu2026',
         'role' => 'editor'
+    ],
+    'Dungtt' => [
+        'password' => 'Dungvnu2026',
+        'role' => 'editor'
     ]
 ];
 
