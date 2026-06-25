@@ -1,17 +1,25 @@
 <?php
 session_start();
 
+require_once 'logger.php';
 require_once 'credentials.php';
 
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+    writeLog("ADMIN_LOGIN_REDIRECT", "Tài khoản đã đăng nhập, chuyển hướng về dashboard", [
+        "username" => $_SESSION['admin_username'] ?? "",
+        "role" => $_SESSION['admin_role'] ?? ""
+    ]);
+
     header("Location: dashboard.php");
     exit();
 }
 
+writeLog("ADMIN_LOGIN_PAGE_ACCESS", "Truy cập trang đăng nhập quản trị");
+
 $error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
+    $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
 
     if (
@@ -24,10 +32,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['admin_role'] = $accounts[$username]['role'] ?? 'viewer';
         $_SESSION['login_time'] = time();
 
+        writeLog("ADMIN_LOGIN_SUCCESS", "Đăng nhập quản trị thành công", [
+            "username" => $username,
+            "role" => $_SESSION['admin_role']
+        ]);
+
         header("Location: dashboard.php");
         exit();
     } else {
         $error = "Tài khoản hoặc mật khẩu không chính xác!";
+
+        writeLog("ADMIN_LOGIN_FAIL", "Đăng nhập quản trị thất bại", [
+            "username" => $username,
+            "reason" => "wrong_username_or_password"
+        ], "WARN");
     }
 }
 ?>

@@ -1,12 +1,24 @@
 <?php
 session_start();
 
+require_once 'logger.php';
+
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    writeLog("ADMIN_BLOCKED_ACCESS", "Truy cập dashboard bị chặn do chưa đăng nhập", [
+        "target" => "dashboard.php"
+    ], "WARN");
+
     header("Location: login.php");
     exit();
 }
 
 $canEdit = isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'editor';
+
+writeLog("ADMIN_DASHBOARD_ACCESS", "Admin/lãnh đạo truy cập dashboard", [
+    "username" => $_SESSION['admin_username'] ?? "",
+    "role" => $_SESSION['admin_role'] ?? "",
+    "can_edit" => $canEdit
+]);
 
 $resultsDir = "results/";
 $summaryFile = $resultsDir . "results.tsv";
@@ -40,6 +52,10 @@ function writeTsvFile($filepath, $data)
     $fp = fopen($filepath, "w");
 
     if (!$fp) {
+        writeLog("SYSTEM_FILE_WRITE_ERROR", "Không thể mở file để ghi", [
+            "file" => $filepath
+        ], "ERROR");
+
         return false;
     }
 
@@ -84,7 +100,7 @@ function getLatestDetailFiles($resultsDir)
     }
 
     foreach (scandir($resultsDir) as $file) {
-        if ($file === "." || $file === ".." || $file === "results.tsv") {
+        if ($file === "." || $file === ".." || $file === "results.tsv" || $file === ".summary_state.json") {
             continue;
         }
 
@@ -97,6 +113,10 @@ function getLatestDetailFiles($resultsDir)
         $parsed = parseDetailFilename($file);
 
         if ($parsed === null) {
+            writeLog("SYSTEM_RESULT_FILE_SKIPPED", "Bỏ qua file không đúng định dạng", [
+                "file" => $file
+            ], "WARN");
+
             continue;
         }
 
@@ -127,6 +147,74 @@ function getLatestDetailFiles($resultsDir)
     return $files;
 }
 
+function getSummaryStateFile($resultsDir)
+{
+    return rtrim($resultsDir, "/") . "/.summary_state.json";
+}
+
+function readSummaryState($resultsDir)
+{
+    $stateFile = getSummaryStateFile($resultsDir);
+
+    if (!file_exists($stateFile)) {
+        return null;
+    }
+
+    $data = json_decode(file_get_contents($stateFile), true);
+
+    return is_array($data) ? $data : null;
+}
+
+function writeSummaryState($resultsDir, $latestDetailFiles)
+{
+    $stateFile = getSummaryStateFile($resultsDir);
+
+    $latestTimestamp = "";
+    $latestMtime = 0;
+
+    foreach ($latestDetailFiles as $fileInfo) {
+        $latestTimestamp = max($latestTimestamp, $fileInfo['timestamp'] ?? "");
+        $latestMtime = max($latestMtime, $fileInfo['time'] ?? 0);
+    }
+
+    $state = [
+        "last_build" => date("Y-m-d H:i:s"),
+        "detail_file_count" => count($latestDetailFiles),
+        "latest_timestamp" => $latestTimestamp,
+        "latest_mtime" => $latestMtime,
+        "files" => array_map(function ($fileInfo) {
+            return [
+                "name" => $fileInfo["name"],
+                "unit" => $fileInfo["unit"],
+                "timestamp" => $fileInfo["timestamp"],
+                "mtime" => $fileInfo["time"]
+            ];
+        }, $latestDetailFiles)
+    ];
+
+    $saved = file_put_contents(
+        $stateFile,
+        json_encode($state, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+        LOCK_EX
+    );
+
+    if ($saved === false) {
+        writeLog("SYSTEM_SUMMARY_STATE_WRITE_ERROR", "Không thể ghi file trạng thái tổng hợp", [
+            "state_file" => $stateFile
+        ], "ERROR");
+
+        return false;
+    }
+
+    writeLog("SYSTEM_SUMMARY_STATE_UPDATED", "Đã cập nhật file trạng thái tổng hợp", [
+        "state_file" => $stateFile,
+        "detail_file_count" => count($latestDetailFiles),
+        "latest_timestamp" => $latestTimestamp
+    ]);
+
+    return true;
+}
+
 function rebuildSummaryFile($resultsDir, $summaryFile, $latestDetailFiles)
 {
     $summaryData = [];
@@ -137,6 +225,10 @@ function rebuildSummaryFile($resultsDir, $summaryFile, $latestDetailFiles)
         $data = readTsvFile($filepath);
 
         if (empty($data)) {
+            writeLog("SYSTEM_SUMMARY_SKIP_EMPTY_DETAIL", "Bỏ qua file chi tiết rỗng khi tổng hợp", [
+                "file" => $filepath
+            ], "WARN");
+
             continue;
         }
 
@@ -175,41 +267,78 @@ function rebuildSummaryFile($resultsDir, $summaryFile, $latestDetailFiles)
         ];
     }
 
-    return writeTsvFile($summaryFile, $summaryData);
+    $result = writeTsvFile($summaryFile, $summaryData);
+
+    if ($result) {
+        writeLog("SYSTEM_REBUILD_RESULTS", "Đã tạo/cập nhật file results.tsv", [
+            "summary_file" => $summaryFile,
+            "detail_file_count" => count($latestDetailFiles),
+            "row_count" => max(count($summaryData) - 1, 0)
+        ]);
+    }
+
+    return $result;
 }
 
 function shouldRebuildSummary($resultsDir, $summaryFile, $latestDetailFiles)
 {
     if (!file_exists($summaryFile)) {
+        writeLog("SYSTEM_REBUILD_NEEDED", "File tổng hợp chưa tồn tại", [
+            "summary_file" => $summaryFile
+        ]);
+
         return true;
     }
 
-    $summaryTime = filemtime($summaryFile);
+    $state = readSummaryState($resultsDir);
+
+    if ($state === null) {
+        writeLog("SYSTEM_REBUILD_NEEDED", "Chưa có file trạng thái tổng hợp", [
+            "state_file" => getSummaryStateFile($resultsDir)
+        ]);
+
+        return true;
+    }
+
+    if (($state["detail_file_count"] ?? -1) !== count($latestDetailFiles)) {
+        writeLog("SYSTEM_REBUILD_NEEDED", "Số file chi tiết mới nhất thay đổi", [
+            "old_count" => $state["detail_file_count"] ?? null,
+            "new_count" => count($latestDetailFiles)
+        ]);
+
+        return true;
+    }
+
+    $currentFiles = [];
 
     foreach ($latestDetailFiles as $fileInfo) {
-        $detailPath = $resultsDir . $fileInfo['name'];
-
-        if (
-            file_exists($detailPath) &&
-            filemtime($detailPath) > $summaryTime
-        ) {
-            return true;
-        }
+        $currentFiles[$fileInfo["name"]] = [
+            "unit" => $fileInfo["unit"],
+            "timestamp" => $fileInfo["timestamp"],
+            "mtime" => $fileInfo["time"]
+        ];
     }
 
-    $summaryData = readTsvFile($summaryFile);
-    $summaryUnits = [];
+    $stateFiles = [];
 
-    for ($i = 1; $i < count($summaryData); $i++) {
-        if (
-            isset($summaryData[$i][1]) &&
-            trim($summaryData[$i][1]) !== ""
-        ) {
-            $summaryUnits[trim($summaryData[$i][1])] = true;
+    foreach (($state["files"] ?? []) as $fileInfo) {
+        if (!isset($fileInfo["name"])) {
+            continue;
         }
+
+        $stateFiles[$fileInfo["name"]] = [
+            "unit" => $fileInfo["unit"] ?? "",
+            "timestamp" => $fileInfo["timestamp"] ?? "",
+            "mtime" => $fileInfo["mtime"] ?? 0
+        ];
     }
 
-    if (count($summaryUnits) !== count($latestDetailFiles)) {
+    if ($currentFiles !== $stateFiles) {
+        writeLog("SYSTEM_REBUILD_NEEDED", "Danh sách file chi tiết mới nhất đã thay đổi", [
+            "current_file_count" => count($currentFiles),
+            "state_file_count" => count($stateFiles)
+        ]);
+
         return true;
     }
 
@@ -217,13 +346,23 @@ function shouldRebuildSummary($resultsDir, $summaryFile, $latestDetailFiles)
 }
 
 if (!is_dir($resultsDir)) {
-    mkdir($resultsDir, 0777, true);
+    if (mkdir($resultsDir, 0777, true)) {
+        writeLog("SYSTEM_RESULTS_DIR_CREATED", "Đã tạo thư mục results", [
+            "dir" => $resultsDir
+        ]);
+    } else {
+        writeLog("SYSTEM_RESULTS_DIR_CREATE_ERROR", "Không thể tạo thư mục results", [
+            "dir" => $resultsDir
+        ], "ERROR");
+    }
 }
 
 $latestDetailFiles = getLatestDetailFiles($resultsDir);
 
 if (shouldRebuildSummary($resultsDir, $summaryFile, $latestDetailFiles)) {
-    rebuildSummaryFile($resultsDir, $summaryFile, $latestDetailFiles);
+    if (rebuildSummaryFile($resultsDir, $summaryFile, $latestDetailFiles)) {
+        writeSummaryState($resultsDir, $latestDetailFiles);
+    }
 }
 
 if (isset($_GET['download'])) {
@@ -235,12 +374,22 @@ if (isset($_GET['download'])) {
         is_file($filepath) &&
         strpos(realpath($filepath), realpath($resultsDir)) === 0
     ) {
+        writeLog("ADMIN_DOWNLOAD_FILE", "Admin/lãnh đạo tải file kết quả", [
+            "file" => $file,
+            "path" => $filepath
+        ]);
+
         header('Content-Description: File Transfer');
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="' . $file . '"');
         header('Content-Length: ' . filesize($filepath));
         readfile($filepath);
         exit();
+    } else {
+        writeLog("ADMIN_DOWNLOAD_FILE_BLOCKED", "Tải file bị chặn hoặc file không tồn tại", [
+            "file" => $file,
+            "path" => $filepath
+        ], "WARN");
     }
 }
 
@@ -263,6 +412,13 @@ foreach ($latestDetailFiles as $fileInfo) {
 
 $uniqueOrganizations = count($latestDetailFiles);
 $detailFilesCount = count($latestDetailFiles);
+
+writeLog("ADMIN_DASHBOARD_RENDER", "Dashboard được render", [
+    "unique_organizations" => $uniqueOrganizations,
+    "detail_files_count" => $detailFilesCount,
+    "has_summary_file" => file_exists($summaryFile),
+    "has_summary_state" => file_exists(getSummaryStateFile($resultsDir))
+]);
 ?>
 <!DOCTYPE html>
 <html lang="vi">

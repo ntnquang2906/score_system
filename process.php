@@ -1,4 +1,12 @@
 <?php
+require_once 'logger.php';
+
+function failWithLog($message, $context = [])
+{
+    writeLog("FORM_SUBMIT_ERROR", $message, $context, "ERROR");
+    die($message);
+}
+
 function clampScore($score, $max)
 {
     return min(max((float) $score, 0), (float) $max);
@@ -426,11 +434,19 @@ function uploadEvidenceFiles($funcKey, $questionId, $orgSafe)
 
     if (!is_dir($uploadDir)) {
         if (!mkdir($uploadDir, 0777, true)) {
+            writeLog("SYSTEM_UPLOAD_DIR_ERROR", "Không thể tạo thư mục upload", [
+                "upload_dir" => $uploadDir
+            ], "ERROR");
+
             return "[Không thể tạo thư mục uploads/" . $orgSafe . "]";
         }
     }
 
     if (!is_writable($uploadDir)) {
+        writeLog("SYSTEM_UPLOAD_DIR_NOT_WRITABLE", "Thư mục upload không có quyền ghi", [
+            "upload_dir" => $uploadDir
+        ], "ERROR");
+
         return "[Thư mục uploads/" . $orgSafe . " không có quyền ghi]";
     }
 
@@ -438,6 +454,13 @@ function uploadEvidenceFiles($funcKey, $questionId, $orgSafe)
         if (!$name) continue;
 
         if ($_FILES[$key]['error'][$idx] !== UPLOAD_ERR_OK) {
+            writeLog("SYSTEM_UPLOAD_FILE_ERROR", "Upload file minh chứng lỗi", [
+                "funcKey" => $funcKey,
+                "questionId" => $questionId,
+                "file_name" => $name,
+                "error_code" => $_FILES[$key]['error'][$idx]
+            ], "ERROR");
+
             continue;
         }
 
@@ -449,6 +472,18 @@ function uploadEvidenceFiles($funcKey, $questionId, $orgSafe)
 
         if (move_uploaded_file($tmp, $target)) {
             $saved[] = $target;
+
+            writeLog("SYSTEM_FILE_UPLOAD", "Đã upload file minh chứng", [
+                "funcKey" => $funcKey,
+                "questionId" => $questionId,
+                "target" => $target
+            ]);
+        } else {
+            writeLog("SYSTEM_UPLOAD_MOVE_ERROR", "Không thể lưu file upload", [
+                "funcKey" => $funcKey,
+                "questionId" => $questionId,
+                "target" => $target
+            ], "ERROR");
         }
     }
 
@@ -479,11 +514,13 @@ function saveToExcel($organization, $results, $totalE, $rank)
 {
     if (!is_dir("results")) {
         if (!mkdir("results", 0777, true)) {
+            writeLog("SYSTEM_RESULTS_DIR_ERROR", "Không thể tạo thư mục results", [], "ERROR");
             return ["error" => "Không thể tạo thư mục 'results'."];
         }
     }
 
     if (!is_writable("results")) {
+        writeLog("SYSTEM_RESULTS_DIR_NOT_WRITABLE", "Thư mục results không có quyền ghi", [], "ERROR");
         return ["error" => "Thư mục 'results' không có quyền ghi."];
     }
 
@@ -492,6 +529,10 @@ function saveToExcel($organization, $results, $totalE, $rank)
     $orgSafe = normalizeVietnameseKeepCase($organization);
 
     if ($orgSafe === "") {
+        writeLog("FORM_SUBMIT_ERROR", "Tên đơn vị không hợp lệ để tạo file", [
+            "organization" => $organization
+        ], "ERROR");
+
         return ["error" => "Tên đơn vị không hợp lệ để tạo file."];
     }
 
@@ -499,6 +540,10 @@ function saveToExcel($organization, $results, $totalE, $rank)
     $fpDownload = fopen($downloadFile, "w");
 
     if (!$fpDownload) {
+        writeLog("SYSTEM_RESULT_FILE_CREATE_ERROR", "Không thể tạo file kết quả", [
+            "file" => $downloadFile
+        ], "ERROR");
+
         return ["error" => "Không thể tạo file kết quả."];
     }
 
@@ -534,10 +579,23 @@ function saveToExcel($organization, $results, $totalE, $rank)
 
     fclose($fpDownload);
 
+    writeLog("SYSTEM_RESULT_FILE_CREATED", "Đã tạo file kết quả chi tiết", [
+        "organization" => $organization,
+        "file" => $downloadFile
+    ]);
+
     return ["success" => true, "file" => $downloadFile];
 }
 
+writeLog("FORM_SUBMIT_START_BACKEND", "Backend bắt đầu xử lý form");
+
 $criteria = json_decode(file_get_contents("criteria.json"), true);
+
+if (!is_array($criteria)) {
+    failWithLog("Không đọc được criteria.json hoặc JSON không hợp lệ.", [
+        "file" => "criteria.json"
+    ]);
+}
 
 $organization = $_POST['organization_name'] ?? "";
 $functions = $_POST['function_type'] ?? [];
@@ -546,17 +604,23 @@ $answers = $_POST['answers'] ?? [];
 $evidenceTexts = $_POST['evidence_text'] ?? [];
 
 if (trim($organization) === "") {
-    die("Thiếu tên đơn vị đánh giá.");
+    failWithLog("Thiếu tên đơn vị đánh giá.", [
+        "field" => "organization_name"
+    ]);
 }
 
 $orgSafe = normalizeVietnameseKeepCase($organization);
 
 if ($orgSafe === "") {
-    die("Tên đơn vị không hợp lệ.");
+    failWithLog("Tên đơn vị không hợp lệ.", [
+        "organization" => $organization
+    ]);
 }
 
 if (empty($functions)) {
-    die("Phải chọn ít nhất 1 chức năng.");
+    failWithLog("Phải chọn ít nhất 1 chức năng.", [
+        "field" => "function_type"
+    ]);
 }
 
 $weightSum = 0;
@@ -566,11 +630,18 @@ foreach ($functions as $funcKey) {
 }
 
 if (abs($weightSum - 100) > 0.00001) {
-    die("Tổng trọng số các chức năng đang chọn phải bằng 100%.");
+    failWithLog("Tổng trọng số các chức năng đang chọn phải bằng 100%.", [
+        "weight_sum" => $weightSum,
+        "functions" => $functions
+    ]);
 }
 
 foreach ($functions as $funcKey) {
     if (!isset($criteria['functions'][$funcKey])) {
+        writeLog("FORM_UNKNOWN_FUNCTION", "Chức năng không tồn tại trong criteria", [
+            "funcKey" => $funcKey
+        ], "WARN");
+
         continue;
     }
 
@@ -581,7 +652,11 @@ foreach ($functions as $funcKey) {
             $answer = $answers[$funcKey][$q['id']] ?? [];
 
             if (!isset($answer['yes']) || $answer['yes'] === "") {
-                die("Thiếu câu trả lời Có/Không cho tiêu chí: " . $q['text']);
+                failWithLog("Thiếu câu trả lời Có/Không cho tiêu chí: " . $q['text'], [
+                    "funcKey" => $funcKey,
+                    "group" => $group['id'],
+                    "questionId" => $q['id']
+                ]);
             }
 
             if (!empty($q['inputs'])) {
@@ -592,7 +667,12 @@ foreach ($functions as $funcKey) {
                         !isset($answer['inputs'][$inputName]) ||
                         trim((string) $answer['inputs'][$inputName]) === ""
                     ) {
-                        die("Thiếu số liệu '" . $input['label'] . "' của tiêu chí: " . $q['text']);
+                        failWithLog("Thiếu số liệu '" . $input['label'] . "' của tiêu chí: " . $q['text'], [
+                            "funcKey" => $funcKey,
+                            "group" => $group['id'],
+                            "questionId" => $q['id'],
+                            "inputName" => $inputName
+                        ]);
                     }
                 }
             }
@@ -601,7 +681,11 @@ foreach ($functions as $funcKey) {
 
             if (!$isQuantitative) {
                 if (!isset($answer['note']) || trim($answer['note']) === "") {
-                    die("Thiếu ghi chú cho tiêu chí: " . $q['text']);
+                    failWithLog("Thiếu ghi chú cho tiêu chí: " . $q['text'], [
+                        "funcKey" => $funcKey,
+                        "group" => $group['id'],
+                        "questionId" => $q['id']
+                    ]);
                 }
             }
 
@@ -609,11 +693,22 @@ foreach ($functions as $funcKey) {
             $hasFile = hasUploadedEvidence($funcKey, $q['id']);
 
             if ($evidenceText === "" && !$hasFile) {
-                die("Thiếu minh chứng cho tiêu chí: " . $q['text']);
+                failWithLog("Thiếu minh chứng cho tiêu chí: " . $q['text'], [
+                    "funcKey" => $funcKey,
+                    "group" => $group['id'],
+                    "questionId" => $q['id']
+                ]);
             }
         }
     }
 }
+
+writeLog("FORM_VALIDATE_SUCCESS", "Dữ liệu form hợp lệ", [
+    "organization" => $organization,
+    "organization_safe" => $orgSafe,
+    "functions" => $functions,
+    "weight_sum" => $weightSum
+]);
 
 $results = [];
 $totalE = 0;
@@ -654,6 +749,18 @@ foreach ($functions as $funcKey) {
                 "note" => $answer['note'] ?? "",
                 "evidence" => $evidence
             ];
+
+            writeLog("FORM_QUESTION_RECORDED", "Backend ghi nhận câu trả lời tiêu chí", [
+                "organization" => $organization,
+                "funcKey" => $funcKey,
+                "group" => $group['id'],
+                "questionId" => $q['id'],
+                "yes" => $answer['yes'] ?? "",
+                "score" => $score,
+                "has_note" => trim($answer['note'] ?? "") !== "",
+                "has_evidence_text" => trim($evidenceText) !== "",
+                "has_uploaded_file" => trim($uploadedFiles) !== ""
+            ]);
         }
     }
 
@@ -687,14 +794,32 @@ if ($totalE >= 80) {
     $rank = "D - Kém";
 }
 
+writeLog("FORM_SCORE_CALCULATED", "Đã tính điểm form", [
+    "organization" => $organization,
+    "totalE" => round($totalE, 2),
+    "rank" => $rank
+]);
+
 $saveResult = saveToExcel($organization, $results, $totalE, $rank);
 
 if (is_array($saveResult) && isset($saveResult['error'])) {
     $errorMessage = $saveResult['error'];
     $downloadFile = null;
+
+    writeLog("FORM_SUBMIT_FAILED", "Nộp form thất bại khi lưu file", [
+        "organization" => $organization,
+        "error" => $errorMessage
+    ], "ERROR");
 } else {
     $errorMessage = null;
     $downloadFile = $saveResult['file'] ?? null;
+
+    writeLog("FORM_SUBMIT_SUCCESS", "Nộp form thành công", [
+        "organization" => $organization,
+        "file" => $downloadFile,
+        "totalE" => round($totalE, 2),
+        "rank" => $rank
+    ]);
 }
 ?>
 
@@ -708,6 +833,27 @@ if (is_array($saveResult) && isset($saveResult['error'])) {
 </head>
 
 <body>
+    <?php if (!$errorMessage): ?>
+        <script>
+            try {
+                localStorage.removeItem("score_system_form_state_v1");
+                fetch("log_event.php", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        type: "FORM_DRAFT_CLEARED",
+                        message: "Đã xóa bản nháp localStorage sau khi nộp thành công",
+                        context: {},
+                        level: "INFO"
+                    }),
+                    keepalive: true
+                }).catch(() => {});
+            } catch (e) {}
+        </script>
+    <?php endif; ?>
+
     <div class="container">
         <h1>Kết quả đánh giá</h1>
 

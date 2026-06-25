@@ -1,12 +1,25 @@
 <?php
 session_start();
 
+require_once 'logger.php';
+
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    writeLog("ADMIN_BLOCKED_ACCESS", "Truy cập trang sửa file bị chặn do chưa đăng nhập", [
+        "target" => "edit_file.php",
+        "file" => $_GET['file'] ?? $_POST['file'] ?? ""
+    ], "WARN");
+
     header("Location: login.php");
     exit();
 }
 
 if (!isset($_SESSION['admin_role']) || $_SESSION['admin_role'] !== 'editor') {
+    writeLog("ADMIN_EDIT_BLOCKED", "Tài khoản không có quyền sửa file", [
+        "username" => $_SESSION['admin_username'] ?? "",
+        "role" => $_SESSION['admin_role'] ?? "",
+        "file" => $_GET['file'] ?? $_POST['file'] ?? ""
+    ], "WARN");
+
     die("Bạn không có quyền sửa file kết quả.");
 }
 
@@ -41,6 +54,10 @@ function writeTsvFile($filepath, $data)
     $fp = fopen($filepath, "w");
 
     if (!$fp) {
+        writeLog("SYSTEM_FILE_WRITE_ERROR", "Không thể mở file để ghi", [
+            "file" => $filepath
+        ], "ERROR");
+
         return false;
     }
 
@@ -96,44 +113,59 @@ function normalizeVietnameseKeepCase($text)
 
     $text = trim($text);
     $text = strtr($text, $map);
-
-    // Ký tự nguy hiểm cho tên file
     $text = preg_replace('/[\/\\\\:\*\?"<>\|]+/u', '_', $text);
-
-    // Các dấu phân cách phổ biến chuyển thành _
     $text = preg_replace('/[\s\-,;]+/u', '_', $text);
-
-    // Chỉ giữ chữ, số, dấu gạch dưới, dấu chấm
     $text = preg_replace('/[^A-Za-z0-9_.]+/u', '_', $text);
-
     $text = preg_replace('/_+/u', '_', $text);
-    $text = trim($text, '._');
 
-    return $text;
+    return trim($text, '._');
 }
 
 $file = $_GET['file'] ?? $_POST['file'] ?? "";
 $file = basename($file);
 
 if ($file === "results.tsv") {
+    writeLog("ADMIN_EDIT_SUMMARY_BLOCKED", "Chặn sửa trực tiếp file tổng hợp", [
+        "file" => $file
+    ], "WARN");
+
     die("Không chỉnh sửa trực tiếp file tổng hợp. File results.tsv được tự động tạo lại từ các file chi tiết.");
 }
 
 $parsed = parseDetailFilename($file);
 
 if ($parsed === null) {
+    writeLog("ADMIN_EDIT_INVALID_FILENAME", "Tên file không đúng định dạng", [
+        "file" => $file
+    ], "WARN");
+
     die("Tên file không đúng định dạng timestamp_ten_don_vi.tsv.");
 }
 
 $filepath = $resultsDir . $file;
 
 if (!file_exists($filepath) || !is_file($filepath)) {
+    writeLog("ADMIN_EDIT_FILE_NOT_FOUND", "File cần sửa không tồn tại", [
+        "file" => $file,
+        "path" => $filepath
+    ], "WARN");
+
     die("File không tồn tại.");
 }
 
 if (strpos(realpath($filepath), realpath($resultsDir)) !== 0) {
+    writeLog("ADMIN_EDIT_FILE_BLOCKED", "Truy cập file sửa bị chặn do không nằm trong thư mục results", [
+        "file" => $file,
+        "path" => $filepath
+    ], "WARN");
+
     die("Quyền truy cập bị từ chối.");
 }
+
+writeLog("ADMIN_EDIT_PAGE_ACCESS", "Admin/lãnh đạo truy cập trang sửa file", [
+    "file" => $file,
+    "username" => $_SESSION['admin_username'] ?? ""
+]);
 
 $message = "";
 $error = "";
@@ -154,8 +186,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $newUnitName = normalizeVietnameseKeepCase($newUnitInput);
 
+    writeLog("ADMIN_EDIT_SUBMIT", "Admin/lãnh đạo gửi form sửa file", [
+        "file" => $file,
+        "old_unit" => $currentUnitName,
+        "new_unit_input" => $newUnitInput,
+        "new_unit_normalized" => $newUnitName,
+        "row_count" => count($postedRows)
+    ]);
+
     if ($newUnitName === "") {
         $error = "Tên đơn vị không hợp lệ.";
+
+        writeLog("ADMIN_EDIT_VALIDATE_FAIL", "Tên đơn vị mới không hợp lệ", [
+            "file" => $file,
+            "new_unit_input" => $newUnitInput
+        ], "WARN");
     } else {
         $newData = [];
         $newData[] = $header;
@@ -175,6 +220,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($saved) {
             $message = "Đã lưu nội dung file chi tiết thành công.";
 
+            writeLog("ADMIN_EDIT_FILE_SAVED", "Đã lưu nội dung file chi tiết", [
+                "file" => $file,
+                "path" => $filepath,
+                "row_count" => max(count($newData) - 1, 0)
+            ]);
+
             $newFilename = $parsed['timestamp'] . "_" . $newUnitName . ".tsv";
 
             if ($newFilename !== $file) {
@@ -182,12 +233,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if (file_exists($newFilepath)) {
                     $error = "Tên file sau khi đổi đã tồn tại: " . $newFilename;
+
+                    writeLog("ADMIN_RENAME_FILE_CONFLICT", "Đổi tên file thất bại do file mới đã tồn tại", [
+                        "old_file" => $file,
+                        "new_file" => $newFilename
+                    ], "WARN");
                 } else {
                     if (rename($filepath, $newFilepath)) {
+                        writeLog("ADMIN_RENAME_FILE_SUCCESS", "Đổi tên file chi tiết thành công", [
+                            "old_file" => $file,
+                            "new_file" => $newFilename,
+                            "old_path" => $filepath,
+                            "new_path" => $newFilepath
+                        ]);
+
                         header("Location: edit_file.php?file=" . urlencode($newFilename) . "&renamed=1");
                         exit();
                     } else {
                         $error = "Không thể đổi tên file. Vui lòng kiểm tra quyền thư mục results.";
+
+                        writeLog("ADMIN_RENAME_FILE_ERROR", "Không thể đổi tên file", [
+                            "old_file" => $file,
+                            "new_file" => $newFilename,
+                            "old_path" => $filepath,
+                            "new_path" => $newFilepath
+                        ], "ERROR");
                     }
                 }
             }
@@ -198,6 +268,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $currentUnitName = $newUnitName;
         } else {
             $error = "Không thể ghi file. Vui lòng kiểm tra quyền thư mục results.";
+
+            writeLog("ADMIN_EDIT_FILE_SAVE_ERROR", "Không thể ghi file chi tiết", [
+                "file" => $file,
+                "path" => $filepath
+            ], "ERROR");
         }
     }
 }

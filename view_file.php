@@ -1,7 +1,14 @@
 <?php
 session_start();
 
+require_once 'logger.php';
+
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    writeLog("ADMIN_BLOCKED_ACCESS", "Truy cập trang xem file bị chặn do chưa đăng nhập", [
+        "target" => "view_file.php",
+        "file" => $_GET['file'] ?? ""
+    ], "WARN");
+
     header("Location: login.php");
     exit();
 }
@@ -39,17 +46,38 @@ $file = basename($file);
 $filepath = $resultsDir . $file;
 
 if (!file_exists($filepath) || !is_file($filepath)) {
+    writeLog("ADMIN_VIEW_FILE_NOT_FOUND", "File cần xem không tồn tại", [
+        "file" => $file,
+        "path" => $filepath
+    ], "WARN");
+
     die("File không tồn tại!");
 }
 
 if (strpos(realpath($filepath), realpath($resultsDir)) !== 0) {
+    writeLog("ADMIN_VIEW_FILE_BLOCKED", "Truy cập file bị chặn do không nằm trong thư mục results", [
+        "file" => $file,
+        "path" => $filepath
+    ], "WARN");
+
     die("Quyền truy cập bị từ chối!");
 }
 
 $content = removeBom(file_get_contents($filepath));
 $data = readTsvFile($filepath);
 
+writeLog("ADMIN_VIEW_FILE", "Admin/lãnh đạo xem file kết quả", [
+    "file" => $file,
+    "row_count" => max(count($data) - 1, 0),
+    "can_edit" => $canEdit
+]);
+
 if (isset($_GET['export']) && $_GET['export'] === '1') {
+    writeLog("ADMIN_EXPORT_FILE", "Admin/lãnh đạo xuất/tải file từ trang xem", [
+        "file" => $file,
+        "row_count" => max(count($data) - 1, 0)
+    ]);
+
     header('Content-Type: application/vnd.ms-excel; charset=utf-8');
     header('Content-Disposition: attachment; filename="' . $file . '"');
     header('Cache-Control: must-revalidate, max-age=0');
