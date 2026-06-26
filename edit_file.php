@@ -79,11 +79,11 @@ function writeTsvFile($filepath, $data)
 
 function parseDetailFilename($file)
 {
-    if (!preg_match('/^(\d{8}_\d{6})_(.+)\.tsv$/u', $file, $matches)) {
+    if ($file === "results.tsv") {
         return null;
     }
 
-    if ($file === "results.tsv") {
+    if (!preg_match('/^(\d{8}_\d{6})_(.+)\.tsv$/u', $file, $matches)) {
         return null;
     }
 
@@ -171,7 +171,7 @@ $message = "";
 $error = "";
 
 if (isset($_GET['renamed']) && $_GET['renamed'] === "1") {
-    $message = "Đã đổi tên đơn vị thành công.";
+    $message = "Đã đổi tên đơn vị thành công. Nội dung file được giữ nguyên.";
 }
 
 $data = readTsvFile($filepath);
@@ -185,13 +185,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $newUnitInput = $_POST['unit_name'] ?? $currentUnitName;
 
     $newUnitName = normalizeVietnameseKeepCase($newUnitInput);
+    $newFilename = $parsed['timestamp'] . "_" . $newUnitName . ".tsv";
+    $newFilepath = $resultsDir . $newFilename;
+    $isRename = ($newFilename !== $file);
 
     writeLog("ADMIN_EDIT_SUBMIT", "Admin/lãnh đạo gửi form sửa file", [
         "file" => $file,
         "old_unit" => $currentUnitName,
         "new_unit_input" => $newUnitInput,
         "new_unit_normalized" => $newUnitName,
-        "row_count" => count($postedRows)
+        "is_rename" => $isRename,
+        "posted_row_count" => count($postedRows),
+        "old_row_count" => count($rows)
     ]);
 
     if ($newUnitName === "") {
@@ -201,78 +206,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "file" => $file,
             "new_unit_input" => $newUnitInput
         ], "WARN");
-    } else {
-        $newData = [];
-        $newData[] = $header;
+    } elseif ($isRename) {
+        /*
+         * Đổi tên file:
+         * - Chỉ copy nguyên file vật lý sang tên mới.
+         * - Không đọc/ghi lại TSV.
+         * - Không dùng dữ liệu rows từ form.
+         * - Không xóa file cũ để đảm bảo dữ liệu gốc vẫn còn trên server.
+         */
+        if (file_exists($newFilepath)) {
+            $error = "File tên mới đã tồn tại: " . $newFilename . ". Hệ thống không ghi đè để tránh mất dữ liệu.";
 
-        foreach ($postedRows as $row) {
-            $newRow = [];
-
-            foreach ($header as $colIndex => $colName) {
-                $newRow[] = trim($row[$colIndex] ?? "");
-            }
-
-            $newData[] = $newRow;
-        }
-
-        $saved = writeTsvFile($filepath, $newData);
-
-        if ($saved) {
-            $message = "Đã lưu nội dung file chi tiết thành công.";
-
-            writeLog("ADMIN_EDIT_FILE_SAVED", "Đã lưu nội dung file chi tiết", [
-                "file" => $file,
-                "path" => $filepath,
-                "row_count" => max(count($newData) - 1, 0)
-            ]);
-
-            $newFilename = $parsed['timestamp'] . "_" . $newUnitName . ".tsv";
-
-            if ($newFilename !== $file) {
-                $newFilepath = $resultsDir . $newFilename;
-
-                if (file_exists($newFilepath)) {
-                    $error = "Tên file sau khi đổi đã tồn tại: " . $newFilename;
-
-                    writeLog("ADMIN_RENAME_FILE_CONFLICT", "Đổi tên file thất bại do file mới đã tồn tại", [
-                        "old_file" => $file,
-                        "new_file" => $newFilename
-                    ], "WARN");
-                } else {
-                    if (rename($filepath, $newFilepath)) {
-                        writeLog("ADMIN_RENAME_FILE_SUCCESS", "Đổi tên file chi tiết thành công", [
-                            "old_file" => $file,
-                            "new_file" => $newFilename,
-                            "old_path" => $filepath,
-                            "new_path" => $newFilepath
-                        ]);
-
-                        header("Location: edit_file.php?file=" . urlencode($newFilename) . "&renamed=1");
-                        exit();
-                    } else {
-                        $error = "Không thể đổi tên file. Vui lòng kiểm tra quyền thư mục results.";
-
-                        writeLog("ADMIN_RENAME_FILE_ERROR", "Không thể đổi tên file", [
-                            "old_file" => $file,
-                            "new_file" => $newFilename,
-                            "old_path" => $filepath,
-                            "new_path" => $newFilepath
-                        ], "ERROR");
-                    }
-                }
-            }
-
-            $data = readTsvFile($filepath);
-            $header = $data[0] ?? [];
-            $rows = array_slice($data, 1);
-            $currentUnitName = $newUnitName;
+            writeLog("ADMIN_RENAME_COPY_CONFLICT", "Không đổi tên vì file mới đã tồn tại", [
+                "old_file" => $file,
+                "new_file" => $newFilename,
+                "old_path" => $filepath,
+                "new_path" => $newFilepath
+            ], "WARN");
         } else {
-            $error = "Không thể ghi file. Vui lòng kiểm tra quyền thư mục results.";
+            $copied = copy($filepath, $newFilepath);
 
-            writeLog("ADMIN_EDIT_FILE_SAVE_ERROR", "Không thể ghi file chi tiết", [
+            if ($copied && file_exists($newFilepath) && filesize($newFilepath) > 0) {
+                writeLog("ADMIN_RENAME_COPY_SUCCESS", "Đã đổi tên file bằng cách copy nguyên nội dung", [
+                    "old_file" => $file,
+                    "new_file" => $newFilename,
+                    "old_path" => $filepath,
+                    "new_path" => $newFilepath,
+                    "old_size" => filesize($filepath),
+                    "new_size" => filesize($newFilepath)
+                ]);
+
+                header("Location: edit_file.php?file=" . urlencode($newFilename) . "&renamed=1");
+                exit();
+            } else {
+                if (file_exists($newFilepath) && filesize($newFilepath) === 0) {
+                    @unlink($newFilepath);
+                }
+
+                $error = "Không thể tạo file mới khi đổi tên. File cũ vẫn được giữ nguyên.";
+
+                writeLog("ADMIN_RENAME_COPY_ERROR", "Không thể copy file khi đổi tên", [
+                    "old_file" => $file,
+                    "new_file" => $newFilename,
+                    "old_path" => $filepath,
+                    "new_path" => $newFilepath
+                ], "ERROR");
+            }
+        }
+    } else {
+        /*
+         * Không đổi tên:
+         * Đây mới là thao tác sửa nội dung file.
+         */
+        if (empty($header)) {
+            $error = "File không có dòng tiêu đề, không thể lưu.";
+
+            writeLog("ADMIN_EDIT_VALIDATE_FAIL", "File không có header", [
                 "file" => $file,
                 "path" => $filepath
             ], "ERROR");
+        } elseif (empty($postedRows) && count($rows) > 0) {
+            $error = "Dữ liệu gửi lên bị rỗng. Hệ thống đã chặn lưu để tránh mất nội dung file.";
+
+            writeLog("ADMIN_EDIT_EMPTY_POST_BLOCKED", "Chặn lưu vì dữ liệu POST rỗng khi sửa nội dung", [
+                "file" => $file,
+                "path" => $filepath,
+                "old_row_count" => count($rows)
+            ], "ERROR");
+        } else {
+            $newData = [];
+            $newData[] = $header;
+
+            foreach ($postedRows as $row) {
+                $newRow = [];
+
+                foreach ($header as $colIndex => $colName) {
+                    $newRow[] = trim($row[$colIndex] ?? "");
+                }
+
+                $newData[] = $newRow;
+            }
+
+            $saved = writeTsvFile($filepath, $newData);
+
+            if ($saved) {
+                $message = "Đã lưu nội dung file chi tiết thành công.";
+
+                writeLog("ADMIN_EDIT_FILE_SAVED", "Đã lưu nội dung file chi tiết", [
+                    "file" => $file,
+                    "path" => $filepath,
+                    "row_count" => max(count($newData) - 1, 0)
+                ]);
+
+                $data = readTsvFile($filepath);
+                $header = $data[0] ?? [];
+                $rows = array_slice($data, 1);
+                $currentUnitName = $newUnitName;
+            } else {
+                $error = "Không thể ghi file. Vui lòng kiểm tra quyền thư mục results.";
+
+                writeLog("ADMIN_EDIT_FILE_SAVE_ERROR", "Không thể ghi file chi tiết", [
+                    "file" => $file,
+                    "path" => $filepath
+                ], "ERROR");
+            }
         }
     }
 }
@@ -515,13 +552,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="notice info">
                 Nguồn dữ liệu gốc là <strong>file chi tiết</strong>. File <strong>results.tsv</strong> sẽ tự động được tạo lại từ các file chi tiết mới nhất khi mở Dashboard.
                 <br>
+                Khi đổi tên đơn vị, hệ thống chỉ copy nguyên file sang tên mới, không thay đổi nội dung bên trong.
+                <br>
                 Dòng tiêu đề cột chỉ đọc để tránh làm hỏng cấu trúc file.
             </div>
 
             <?php if (empty($data)): ?>
                 <p>File không có dữ liệu.</p>
             <?php else: ?>
-                <form method="POST" id="editForm">
+                <form method="POST" id="editForm" action="edit_file.php?file=<?php echo urlencode($file); ?>">
                     <input type="hidden" name="file" value="<?php echo htmlspecialchars($file); ?>">
 
                     <div class="filename-box">
@@ -539,7 +578,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <div class="toolbar">
-                        <button type="submit" form="editForm" class="btn save-btn">💾 Lưu thay đổi</button>
+                        <button type="submit" class="btn save-btn">💾 Lưu thay đổi</button>
                         <a href="view_file.php?file=<?php echo urlencode($file); ?>" class="btn view-btn">👁️ Xem file</a>
                         <a href="dashboard.php" class="btn back-btn">← Quay lại</a>
                     </div>
@@ -570,7 +609,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <?php foreach ($header as $colIndex => $colName): ?>
                                             <?php
                                             $value = $row[$colIndex] ?? "";
-                                            $headerLower = mb_strtolower($colName, 'UTF-8');
+                                            $headerLower = strtolower($colName);
 
                                             $class = "";
 
