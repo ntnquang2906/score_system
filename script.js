@@ -516,9 +516,39 @@ function validateForm() {
         }
     }
 
+    // ─── Kiểm tra tổng dung lượng file, cảnh báo nếu lớn ───────────────────
+    let totalBytes = 0;
+    document.querySelectorAll('input[type="file"]').forEach(fi => {
+        if (fi.files) {
+            for (const f of fi.files) {
+                totalBytes += f.size;
+            }
+        }
+    });
+
+    const totalMB = totalBytes / 1048576;
+
+    if (totalMB > 50) {
+        const confirmed = confirm(
+            `⚠️ Tổng dung lượng file minh chứng đang là ${totalMB.toFixed(1)} MB.\n\n` +
+            `File lớn có thể mất nhiều thời gian để tải lên (vài phút). ` +
+            `Vui lòng không đóng trình duyệt trong khi chờ.\n\n` +
+            `Bạn có muốn tiếp tục nộp không?`
+        );
+
+        if (!confirmed) {
+            queueClientLog("FORM_SUBMIT_CANCELLED_LARGE_FILE", "Người dùng huỷ nộp do file lớn", {
+                total_mb: totalMB.toFixed(1)
+            }, "WARN");
+            return false;
+        }
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     sendClientLog("FORM_SUBMIT_START", "Người dùng bắt đầu gửi form", {
         organization_has_value: orgName !== "",
-        selected_functions: checkedTypes
+        selected_functions: checkedTypes,
+        total_file_mb: totalMB.toFixed(1)
     });
 
     return true;

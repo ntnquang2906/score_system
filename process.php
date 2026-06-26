@@ -1,6 +1,23 @@
 <?php
 require_once 'logger.php';
 
+// ─── Detect POST bị discard do vượt post_max_size ───────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST)) {
+    $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    $postMaxSize   = ini_get('post_max_size');
+
+    writeLog("FORM_SUBMIT_ERROR", "POST data rỗng - có thể do vượt post_max_size", [
+        "content_length_bytes" => $contentLength,
+        "post_max_size"        => $postMaxSize
+    ], "ERROR");
+
+    $mb = $contentLength > 0 ? round($contentLength / 1048576, 1) . " MB" : "không xác định";
+
+    die("⚠️ Tổng dung lượng file minh chứng quá lớn ({$mb}), server không nhận được dữ liệu form. "
+      . "Vui lòng liên hệ quản trị viên hoặc giảm bớt dung lượng file đính kèm.");
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function failWithLog($message, $context = [])
 {
     writeLog("FORM_SUBMIT_ERROR", $message, $context, "ERROR");
