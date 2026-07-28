@@ -55,6 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Đăng nhập - Hệ thống đánh giá KH&CN</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -174,6 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="login-btn">Đăng nhập</button>
         </form>
     </div>
+    <script src="pwa-register.js"></script>
 </body>
 
 </html>

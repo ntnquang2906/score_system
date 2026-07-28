@@ -1,0 +1,24 @@
+{
+    "name": "Hệ thống đánh giá tổ chức KH&CN",
+    "short_name": "Đánh giá KH&CN",
+    "start_url": "index.php",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#f4f6f8",
+    "theme_color": "#2563eb",
+    "lang": "vi",
+    "icons": [
+        {
+            "src": "icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

@@ -1,0 +1,9 @@
+{
+  "appId": "vn.airc.scoresystem",
+  "appName": "Đánh giá KH&CN",
+  "webDir": "www",
+  "server": {
+    "url": "http://192.168.88.13:6868",
+    "cleartext": true
+  }
+}

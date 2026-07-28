@@ -426,6 +426,10 @@ writeLog("ADMIN_DASHBOARD_RENDER", "Dashboard được render", [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Dashboard - Kết quả đánh giá KH&CN</title>
     <style>
         * {
@@ -521,10 +525,15 @@ writeLog("ADMIN_DASHBOARD_RENDER", "Dashboard được render", [
             color: #667eea;
         }
 
+        .table-wrap {
+            overflow-x: auto;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
+            min-width: 600px;
         }
 
         table thead {
@@ -654,6 +663,7 @@ writeLog("ADMIN_DASHBOARD_RENDER", "Dashboard được render", [
             <?php if (empty($files)): ?>
                 <div class="empty-message">Chưa có file kết quả nào được lưu.</div>
             <?php else: ?>
+                <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
@@ -688,9 +698,11 @@ writeLog("ADMIN_DASHBOARD_RENDER", "Dashboard được render", [
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+                </div>
             <?php endif; ?>
         </div>
     </div>
+    <script src="pwa-register.js"></script>
 </body>
 
 </html>

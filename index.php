@@ -10,6 +10,13 @@ writeLog("PAGE_ACCESS", "Người dùng truy cập form đánh giá", [
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Đánh giá KH&CN">
     <title>Hệ thống đánh giá KH&CN</title>
     <link rel="stylesheet" href="style.css">
     <style>
@@ -32,6 +39,14 @@ writeLog("PAGE_ACCESS", "Người dùng truy cập form đánh giá", [
 
         body {
             position: relative;
+        }
+
+        @media(max-width:480px) {
+            .admin-login-link {
+                position: static;
+                display: inline-block;
+                margin-bottom: 12px;
+            }
         }
     </style>
 </head>
@@ -72,6 +87,7 @@ writeLog("PAGE_ACCESS", "Người dùng truy cập form đánh giá", [
     </form>
 
     <script src="script.js?v=7"></script>
+    <script src="pwa-register.js"></script>
 </body>
 
 </html>

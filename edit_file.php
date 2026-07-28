@@ -319,6 +319,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Chỉnh sửa file - <?php echo htmlspecialchars($file); ?></title>
     <style>
         * {
@@ -641,6 +646,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
         </div>
     </div>
+    <script src="pwa-register.js"></script>
 </body>
 
 </html>

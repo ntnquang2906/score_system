@@ -7,3 +7,11 @@ Thumbs.db
 results/
 uploads/
 logs/
+
+# mobile-app (Capacitor/Android)
+mobile-app/android/build/
+mobile-app/android/app/build/
+mobile-app/android/.gradle/
+mobile-app/android/local.properties
+mobile-app/android/captures/
+mobile-app/android/*.apk

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Đánh giá KH&amp;CN</string>
+    <string name="title_activity_main">Đánh giá KH&amp;CN</string>
+    <string name="package_name">vn.airc.scoresystem</string>
+    <string name="custom_url_scheme">vn.airc.scoresystem</string>
+</resources>
