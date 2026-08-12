@@ -51,13 +51,15 @@ cd score_system
 
 # copy cấu hình PHP khuyến nghị (tăng giới hạn upload/post size, timeout)
 # nếu dùng PHP built-in server, trỏ trực tiếp tới file này:
-php -c php.ini -S localhost:8000
+php -c php.ini -S 0.0.0.0:6868
 ```
+
+> Port `6868` là port đang được dùng thực tế (xem `mobile-app/capacitor.config.json` → `server.url: http://192.168.88.13:6868`, bản Android trỏ vào đúng port này để load giao diện web). Nếu đổi port khi chạy dev, nhớ cập nhật lại `capacitor.config.json` tương ứng để app mobile không mất kết nối.
 
 Sau đó mở:
 
-- `http://localhost:8000/index.php` — form đánh giá
-- `http://localhost:8000/login.php` — đăng nhập quản trị (tài khoản xem tại `credentials.php`)
+- `http://localhost:6868/index.php` (hoặc `http://<IP-máy>:6868/index.php` nếu truy cập từ thiết bị khác trong mạng LAN, ví dụ từ app Android) — form đánh giá
+- `http://localhost:6868/login.php` — đăng nhập quản trị (tài khoản xem tại `credentials.php`)
 
 > Lưu ý: thư mục `results/` và `logs/` sẽ được ứng dụng tự tạo (`mkdir`) khi có lượt nộp form/ghi log đầu tiên, nếu process PHP có quyền ghi vào thư mục gốc dự án.
 
