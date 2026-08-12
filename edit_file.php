@@ -2,6 +2,9 @@
 session_start();
 
 require_once 'logger.php';
+require_once 'lang.php';
+
+initLang();
 
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     writeLog("ADMIN_BLOCKED_ACCESS", "Truy cập trang sửa file bị chặn do chưa đăng nhập", [
@@ -20,7 +23,7 @@ if (!isset($_SESSION['admin_role']) || $_SESSION['admin_role'] !== 'editor') {
         "file" => $_GET['file'] ?? $_POST['file'] ?? ""
     ], "WARN");
 
-    die("Bạn không có quyền sửa file kết quả.");
+    die(t('edit.no_permission'));
 }
 
 $resultsDir = "results/";
@@ -129,7 +132,7 @@ if ($file === "results.tsv") {
         "file" => $file
     ], "WARN");
 
-    die("Không chỉnh sửa trực tiếp file tổng hợp. File results.tsv được tự động tạo lại từ các file chi tiết.");
+    die(t('edit.block_summary'));
 }
 
 $parsed = parseDetailFilename($file);
@@ -139,7 +142,7 @@ if ($parsed === null) {
         "file" => $file
     ], "WARN");
 
-    die("Tên file không đúng định dạng timestamp_ten_don_vi.tsv.");
+    die(t('edit.invalid_filename'));
 }
 
 $filepath = $resultsDir . $file;
@@ -150,7 +153,7 @@ if (!file_exists($filepath) || !is_file($filepath)) {
         "path" => $filepath
     ], "WARN");
 
-    die("File không tồn tại.");
+    die(t('edit.file_not_found'));
 }
 
 if (strpos(realpath($filepath), realpath($resultsDir)) !== 0) {
@@ -159,7 +162,7 @@ if (strpos(realpath($filepath), realpath($resultsDir)) !== 0) {
         "path" => $filepath
     ], "WARN");
 
-    die("Quyền truy cập bị từ chối.");
+    die(t('edit.access_denied'));
 }
 
 writeLog("ADMIN_EDIT_PAGE_ACCESS", "Admin/lãnh đạo truy cập trang sửa file", [
@@ -171,7 +174,7 @@ $message = "";
 $error = "";
 
 if (isset($_GET['renamed']) && $_GET['renamed'] === "1") {
-    $message = "Đã đổi tên đơn vị thành công. Nội dung file được giữ nguyên.";
+    $message = t('edit.renamed_success');
 }
 
 $data = readTsvFile($filepath);
@@ -200,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ]);
 
     if ($newUnitName === "") {
-        $error = "Tên đơn vị không hợp lệ.";
+        $error = t('edit.invalid_unit_name');
 
         writeLog("ADMIN_EDIT_VALIDATE_FAIL", "Tên đơn vị mới không hợp lệ", [
             "file" => $file,
@@ -215,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          * - Không xóa file cũ để đảm bảo dữ liệu gốc vẫn còn trên server.
          */
         if (file_exists($newFilepath)) {
-            $error = "File tên mới đã tồn tại: " . $newFilename . ". Hệ thống không ghi đè để tránh mất dữ liệu.";
+            $error = t('edit.filename_exists', ['file' => $newFilename]);
 
             writeLog("ADMIN_RENAME_COPY_CONFLICT", "Không đổi tên vì file mới đã tồn tại", [
                 "old_file" => $file,
@@ -243,7 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     @unlink($newFilepath);
                 }
 
-                $error = "Không thể tạo file mới khi đổi tên. File cũ vẫn được giữ nguyên.";
+                $error = t('edit.rename_create_failed');
 
                 writeLog("ADMIN_RENAME_COPY_ERROR", "Không thể copy file khi đổi tên", [
                     "old_file" => $file,
@@ -259,14 +262,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          * Đây mới là thao tác sửa nội dung file.
          */
         if (empty($header)) {
-            $error = "File không có dòng tiêu đề, không thể lưu.";
+            $error = t('edit.no_header_row');
 
             writeLog("ADMIN_EDIT_VALIDATE_FAIL", "File không có header", [
                 "file" => $file,
                 "path" => $filepath
             ], "ERROR");
         } elseif (empty($postedRows) && count($rows) > 0) {
-            $error = "Dữ liệu gửi lên bị rỗng. Hệ thống đã chặn lưu để tránh mất nội dung file.";
+            $error = t('edit.empty_post_blocked');
 
             writeLog("ADMIN_EDIT_EMPTY_POST_BLOCKED", "Chặn lưu vì dữ liệu POST rỗng khi sửa nội dung", [
                 "file" => $file,
@@ -290,7 +293,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $saved = writeTsvFile($filepath, $newData);
 
             if ($saved) {
-                $message = "Đã lưu nội dung file chi tiết thành công.";
+                $message = t('edit.save_success');
 
                 writeLog("ADMIN_EDIT_FILE_SAVED", "Đã lưu nội dung file chi tiết", [
                     "file" => $file,
@@ -303,7 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $rows = array_slice($data, 1);
                 $currentUnitName = $newUnitName;
             } else {
-                $error = "Không thể ghi file. Vui lòng kiểm tra quyền thư mục results.";
+                $error = t('edit.save_failed');
 
                 writeLog("ADMIN_EDIT_FILE_SAVE_ERROR", "Không thể ghi file chi tiết", [
                     "file" => $file,
@@ -315,7 +318,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="<?php echo $LANG; ?>">
 
 <head>
     <meta charset="UTF-8">
@@ -324,7 +327,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-180.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Chỉnh sửa file - <?php echo htmlspecialchars($file); ?></title>
+    <title><?php echo t('edit.title', ['file' => htmlspecialchars($file)]); ?></title>
+    <link rel="stylesheet" href="i18n.css">
     <style>
         * {
             box-sizing: border-box;
@@ -341,6 +345,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
         .header-inner {
@@ -539,8 +546,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <div class="header">
         <div class="header-inner">
-            <h1>✏️ Chỉnh sửa file: <?php echo htmlspecialchars($file); ?></h1>
-            <a href="dashboard.php">← Dashboard</a>
+            <h1><?php echo t('edit.h1', ['file' => htmlspecialchars($file)]); ?></h1>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <?php echo langSwitchLinks(true); ?>
+                <a href="dashboard.php"><?php echo t('edit.back_dashboard'); ?></a>
+            </div>
         </div>
     </div>
 
@@ -555,37 +565,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <div class="notice info">
-                Nguồn dữ liệu gốc là <strong>file chi tiết</strong>. File <strong>results.tsv</strong> sẽ tự động được tạo lại từ các file chi tiết mới nhất khi mở Dashboard.
-                <br>
-                Khi đổi tên đơn vị, hệ thống chỉ copy nguyên file sang tên mới, không thay đổi nội dung bên trong.
-                <br>
-                Dòng tiêu đề cột chỉ đọc để tránh làm hỏng cấu trúc file.
+                <?php echo t('edit.info_box'); ?>
             </div>
 
             <?php if (empty($data)): ?>
-                <p>File không có dữ liệu.</p>
+                <p><?php echo t('edit.no_data'); ?></p>
             <?php else: ?>
                 <form method="POST" id="editForm" action="edit_file.php?file=<?php echo urlencode($file); ?>">
                     <input type="hidden" name="file" value="<?php echo htmlspecialchars($file); ?>">
 
                     <div class="filename-box">
-                        <label>Tên đơn vị</label>
+                        <label><?php echo t('edit.unit_name_label'); ?></label>
                         <input
                             type="text"
                             name="unit_name"
                             value="<?php echo htmlspecialchars($currentUnitName); ?>">
                         <small>
-                            Khi lưu, hệ thống sẽ giữ timestamp và chuẩn hóa tên file:
-                            bỏ dấu tiếng Việt, thay khoảng trắng bằng dấu gạch dưới, giữ nguyên hoa/thường.
-                            <br>
-                            Ví dụ: <strong>Viện Công nghệ thông tin</strong> → <strong>Vien_Cong_nghe_thong_tin</strong>
+                            <?php echo t('edit.unit_name_help'); ?>
                         </small>
                     </div>
 
                     <div class="toolbar">
-                        <button type="submit" class="btn save-btn">💾 Lưu thay đổi</button>
-                        <a href="view_file.php?file=<?php echo urlencode($file); ?>" class="btn view-btn">👁️ Xem file</a>
-                        <a href="dashboard.php" class="btn back-btn">← Quay lại</a>
+                        <button type="submit" class="btn save-btn"><?php echo t('edit.save_btn'); ?></button>
+                        <a href="view_file.php?file=<?php echo urlencode($file); ?>" class="btn view-btn"><?php echo t('edit.view_btn'); ?></a>
+                        <a href="dashboard.php" class="btn back-btn"><?php echo t('edit.back_btn'); ?></a>
                     </div>
 
                     <div class="table-wrap">
@@ -601,7 +604,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             <tbody>
                                 <tr class="readonly-header">
-                                    <td class="row-number">Header</td>
+                                    <td class="row-number"><?php echo t('edit.row_header_label'); ?></td>
                                     <?php foreach ($header as $colName): ?>
                                         <td><?php echo htmlspecialchars($colName); ?></td>
                                     <?php endforeach; ?>
@@ -621,7 +624,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             if (
                                                 strpos($headerLower, "câu hỏi") !== false ||
                                                 strpos($headerLower, "chú thích") !== false ||
-                                                strpos($headerLower, "minh chứng") !== false
+                                                strpos($headerLower, "minh chứng") !== false ||
+                                                strpos($headerLower, "giải thích") !== false
                                             ) {
                                                 $class = "wide";
                                             } elseif (

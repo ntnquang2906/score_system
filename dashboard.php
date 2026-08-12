@@ -2,6 +2,9 @@
 session_start();
 
 require_once 'logger.php';
+require_once 'lang.php';
+
+initLang();
 
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     writeLog("ADMIN_BLOCKED_ACCESS", "Truy cập dashboard bị chặn do chưa đăng nhập", [
@@ -263,7 +266,8 @@ function rebuildSummaryFile($resultsDir, $summaryFile, $latestDetailFiles)
             "Có/Không",
             "Điểm câu hỏi",
             "Chú thích",
-            "Minh chứng"
+            "Minh chứng",
+            "Giải thích"
         ];
     }
 
@@ -421,7 +425,7 @@ writeLog("ADMIN_DASHBOARD_RENDER", "Dashboard được render", [
 ]);
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="<?php echo $LANG; ?>">
 
 <head>
     <meta charset="UTF-8">
@@ -430,7 +434,8 @@ writeLog("ADMIN_DASHBOARD_RENDER", "Dashboard được render", [
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-180.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Dashboard - Kết quả đánh giá KH&CN</title>
+    <title><?php echo t('dashboard.title'); ?></title>
+    <link rel="stylesheet" href="i18n.css">
     <style>
         * {
             margin: 0;
@@ -449,6 +454,9 @@ writeLog("ADMIN_DASHBOARD_RENDER", "Dashboard được render", [
             color: white;
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
         .header .container {
@@ -476,6 +484,16 @@ writeLog("ADMIN_DASHBOARD_RENDER", "Dashboard được render", [
             padding: 8px 16px;
             border-radius: 5px;
             cursor: pointer;
+        }
+
+        .header .form-link {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            white-space: nowrap;
         }
 
         .container {
@@ -622,14 +640,16 @@ writeLog("ADMIN_DASHBOARD_RENDER", "Dashboard được render", [
 <body>
     <div class="header">
         <div class="container">
-            <h1>📊 Dashboard - Kết quả đánh giá KH&CN</h1>
+            <h1><?php echo t('dashboard.h1'); ?></h1>
             <div class="user-info">
+                <?php echo langSwitchLinks(true); ?>
+                <a href="index.php" class="form-link"><?php echo t('dashboard.back_to_form'); ?></a>
                 <span>👤 <?php echo htmlspecialchars($_SESSION['admin_username']); ?></span>
                 <span class="role-badge">
-                    <?php echo $canEdit ? 'Quyền sửa' : 'Chỉ xem'; ?>
+                    <?php echo $canEdit ? t('dashboard.role_editor') : t('dashboard.role_viewer'); ?>
                 </span>
                 <form method="POST" action="logout.php" style="margin: 0;">
-                    <button type="submit" class="logout-btn">Đăng xuất</button>
+                    <button type="submit" class="logout-btn"><?php echo t('dashboard.logout_btn'); ?></button>
                 </form>
             </div>
         </div>
@@ -637,40 +657,40 @@ writeLog("ADMIN_DASHBOARD_RENDER", "Dashboard được render", [
 
     <div class="container">
         <div class="section">
-            <h2>📈 Thông tin tổng hợp</h2>
+            <h2><?php echo t('dashboard.summary_heading'); ?></h2>
             <div class="stats">
                 <div class="stat-box">
-                    <div class="label">Tổng số đơn vị đã điền</div>
+                    <div class="label"><?php echo t('dashboard.stat_total_orgs'); ?></div>
                     <div class="value"><?php echo $uniqueOrganizations; ?></div>
                 </div>
                 <div class="stat-box">
-                    <div class="label">Tổng số file chi tiết đang hiển thị</div>
+                    <div class="label"><?php echo t('dashboard.stat_total_detail_files'); ?></div>
                     <div class="value"><?php echo $detailFilesCount; ?></div>
                 </div>
                 <div class="stat-box">
-                    <div class="label">File tổng hợp</div>
+                    <div class="label"><?php echo t('dashboard.stat_summary_file'); ?></div>
                     <div class="value"><?php echo file_exists($summaryFile) ? '✓' : '✗'; ?></div>
                 </div>
             </div>
         </div>
 
         <div class="section">
-            <h2>📁 Danh sách file kết quả</h2>
+            <h2><?php echo t('dashboard.files_heading'); ?></h2>
             <div class="info-box">
-                💡 Dashboard bao gồm <strong>results.tsv</strong> là <strong>file tổng hợp</strong> được xếp ở đầu và <strong>file chi tiết mới nhất của mỗi đơn vị</strong> theo thứ tự thời gian điền.
+                <?php echo t('dashboard.info_box'); ?>
             </div>
 
             <?php if (empty($files)): ?>
-                <div class="empty-message">Chưa có file kết quả nào được lưu.</div>
+                <div class="empty-message"><?php echo t('dashboard.empty_message'); ?></div>
             <?php else: ?>
                 <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            <th>Tên file</th>
-                            <th>Dung lượng</th>
-                            <th>Thời gian chỉnh sửa</th>
-                            <th>Hành động</th>
+                            <th><?php echo t('dashboard.th_filename'); ?></th>
+                            <th><?php echo t('dashboard.th_size'); ?></th>
+                            <th><?php echo t('dashboard.th_modified'); ?></th>
+                            <th><?php echo t('dashboard.th_actions'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -680,18 +700,18 @@ writeLog("ADMIN_DASHBOARD_RENDER", "Dashboard được render", [
                                     <?php echo htmlspecialchars($file['name']); ?>
                                     <?php if ($file['name'] !== 'results.tsv'): ?>
                                         <div class="unit-name">
-                                            Đơn vị: <?php echo htmlspecialchars($file['unit']); ?>
+                                            <?php echo htmlspecialchars(t('dashboard.unit_prefix')); ?><?php echo htmlspecialchars($file['unit']); ?>
                                         </div>
                                     <?php endif; ?>
                                 </td>
-                                <td class="file-size"><?php echo number_format($file['size'], 0) . ' bytes'; ?></td>
+                                <td class="file-size"><?php echo number_format($file['size'], 0) . t('dashboard.bytes_suffix'); ?></td>
                                 <td><?php echo $file['modified']; ?></td>
                                 <td>
-                                    <a href="view_file.php?file=<?php echo urlencode($file['name']); ?>" class="view-btn">Xem</a>
-                                    <a href="?download=<?php echo urlencode($file['name']); ?>" class="download-btn">Tải xuống</a>
+                                    <a href="view_file.php?file=<?php echo urlencode($file['name']); ?>" class="view-btn"><?php echo t('dashboard.view_link'); ?></a>
+                                    <a href="?download=<?php echo urlencode($file['name']); ?>" class="download-btn"><?php echo t('dashboard.download_link'); ?></a>
 
                                     <?php if ($canEdit && $file['name'] !== 'results.tsv'): ?>
-                                        <a href="edit_file.php?file=<?php echo urlencode($file['name']); ?>" class="edit-btn">Sửa</a>
+                                        <a href="edit_file.php?file=<?php echo urlencode($file['name']); ?>" class="edit-btn"><?php echo t('dashboard.edit_link'); ?></a>
                                     <?php endif; ?>
                                 </td>
                             </tr>

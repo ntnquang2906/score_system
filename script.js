@@ -1,6 +1,12 @@
 let CRITERIA = {};
 const formState = {};
 
+function pick(obj, field) {
+    const enField = field + "_en";
+    if (window.APP_LANG === "en" && obj[enField]) return obj[enField];
+    return obj[field];
+}
+
 const STORAGE_KEY = "score_system_form_state_v1";
 let logBuffer = [];
 let logTimer = null;
@@ -258,12 +264,12 @@ function renderFunction(type) {
 
     let html = `
         <section class="function-card" id="section-${type}">
-            <h2>${func.name}</h2>
+            <h2>${pick(func, "name")}</h2>
     `;
 
     html += `
         <div class="weight-box">
-            <label>Trọng số (%) <span style="color:red">*</span></label>
+            <label>${I18N.weight_label} <span style="color:red">*</span></label>
             <input
                 type="number"
                 name="weight[${type}]"
@@ -279,7 +285,7 @@ function renderFunction(type) {
     func.groups.forEach(group => {
         html += `
             <div class="group-block">
-                <h3>${group.title} (${group.max} điểm)</h3>
+                <h3>${pick(group, "title")} (${group.max} ${I18N.points})</h3>
         `;
 
         group.criteria.forEach(q => {
@@ -307,22 +313,22 @@ function renderQuestion(type, groupId, q) {
 
     html += `
         <div class="q-main">
-            <strong>${q.text}</strong>
-            <small>Nhóm: ${groupId} | Tối đa: ${q.max} điểm</small>
+            <strong>${pick(q, "text")}</strong>
+            <small>${I18N.group_label}${groupId} | ${I18N.max_label}${q.max} ${I18N.points}</small>
         </div>
     `;
 
     html += `
         <div>
-            <label>Đáp án <span style="color:red">*</span></label>
+            <label>${I18N.answer_label} <span style="color:red">*</span></label>
             <select
                 required
                 name="answers[${type}][${q.id}][yes]"
                 data-state-path="${basePath}.yes"
                 onchange="saveValue('${basePath}.yes', this.value); queueClientLog('FORM_QUESTION_ANSWERED', 'Người dùng chọn Có/Không cho tiêu chí', { function_type: '${type}', group: '${groupId}', question_id: '${q.id}', value: this.value })">
-                <option value="">-- Chọn --</option>
-                <option value="1" ${yesVal === "1" ? "selected" : ""}>Có</option>
-                <option value="0" ${yesVal === "0" ? "selected" : ""}>Không</option>
+                <option value="">${I18N.select_placeholder}</option>
+                <option value="1" ${yesVal === "1" ? "selected" : ""}>${I18N.yes}</option>
+                <option value="0" ${yesVal === "0" ? "selected" : ""}>${I18N.no}</option>
             </select>
         </div>
     `;
@@ -334,7 +340,7 @@ function renderQuestion(type, groupId, q) {
 
             html += `
                 <div>
-                    <label>${input.label} <span style="color:red">*</span></label>
+                    <label>${pick(input, "label")} <span style="color:red">*</span></label>
                     <input
                         type="number"
                         step="any"
@@ -352,26 +358,26 @@ function renderQuestion(type, groupId, q) {
     if (!isQuantitative) {
         html += `
             <div>
-                <label>Chú thích <span style="color:red">*</span></label>
+                <label>${I18N.note_label} <span style="color:red">*</span></label>
                 <textarea
                     required
                     name="answers[${type}][${q.id}][note]"
                     data-state-path="${basePath}.note"
                     oninput="saveValue('${basePath}.note', this.value); queueClientLog('FORM_FIELD_UPDATED', 'Người dùng nhập chú thích tiêu chí', { function_type: '${type}', group: '${groupId}', question_id: '${q.id}', field: 'note', has_value: this.value.trim() !== '', length: this.value.trim().length })"
-                    placeholder="${q.note_placeholder || 'Nhập thông tin bổ sung...'}">${noteVal}</textarea>
+                    placeholder="${pick(q, 'note_placeholder') || I18N.note_placeholder_default}">${noteVal}</textarea>
             </div>
         `;
     }
 
     html += `
         <div class="evidence-box">
-            <label>Minh chứng <span style="color:red">*</span></label>
+            <label>${I18N.evidence_label} <span style="color:red">*</span></label>
 
             <textarea
                 name="evidence_text[${type}][${q.id}]"
                 data-state-path="${basePath}.evidence_text"
                 oninput="saveValue('${basePath}.evidence_text', this.value); queueClientLog('FORM_FIELD_UPDATED', 'Người dùng nhập mô tả minh chứng', { function_type: '${type}', group: '${groupId}', question_id: '${q.id}', field: 'evidence_text', has_value: this.value.trim() !== '', length: this.value.trim().length })"
-                placeholder="Nhập mô tả minh chứng, số quyết định, đường link, số văn bản... hoặc tải tệp bên dưới">${evidenceTextVal}</textarea>
+                placeholder="${I18N.evidence_placeholder}">${evidenceTextVal}</textarea>
 
             <input
                 type="file"
@@ -380,8 +386,8 @@ function renderQuestion(type, groupId, q) {
                 onchange="queueClientLog('FORM_EVIDENCE_FILE_SELECTED', 'Người dùng chọn file minh chứng', { function_type: '${type}', group: '${groupId}', question_id: '${q.id}', file_count: this.files ? this.files.length : 0 })">
 
             <small>
-                Có thể nhập mô tả, tải tệp hoặc cả hai. Hỗ trợ ảnh, PDF, Word, Excel, ZIP...
-                <br><em>Lưu ý: file đã chọn không thể tự khôi phục sau khi tải lại trang do chính sách bảo mật của trình duyệt.</em>
+                ${I18N.evidence_help}
+                <br><em>${I18N.evidence_note}</em>
             </small>
         </div>
     `;
@@ -402,7 +408,7 @@ function validateForm() {
             field: "organization_name"
         }, "WARN");
 
-        alert("Vui lòng nhập tên đơn vị đánh giá.");
+        alert(I18N.alert_missing_org);
         if (orgInput) orgInput.focus();
         return false;
     }
@@ -413,7 +419,7 @@ function validateForm() {
 
     if (checkedTypes.length === 0) {
         queueClientLog("FORM_VALIDATE_FAIL", "Chưa chọn chức năng", {}, "WARN");
-        alert("Phải chọn ít nhất 1 chức năng.");
+        alert(I18N.alert_missing_function);
         return false;
     }
 
@@ -429,7 +435,7 @@ function validateForm() {
             weight_sum: weightSum
         }, "WARN");
 
-        alert("Tổng trọng số các chức năng đang chọn phải bằng 100%.");
+        alert(I18N.alert_weight_sum);
         return false;
     }
 
@@ -445,7 +451,7 @@ function validateForm() {
                     name: s.name
                 }, "WARN");
 
-                alert("Vui lòng chọn Có/Không cho tất cả câu hỏi đang hiển thị.");
+                alert(I18N.alert_missing_yes_no);
                 s.focus();
                 return false;
             }
@@ -460,7 +466,7 @@ function validateForm() {
                     name: n.name
                 }, "WARN");
 
-                alert("Vui lòng điền đầy đủ các ô số liệu/trọng số đang hiển thị.");
+                alert(I18N.alert_missing_number);
                 n.focus();
                 return false;
             }
@@ -478,7 +484,7 @@ function validateForm() {
                     name: t.name
                 }, "WARN");
 
-                alert("Vui lòng nhập đầy đủ phần Chú thích/Ghi chú đang hiển thị.");
+                alert(I18N.alert_missing_note);
                 t.focus();
                 return false;
             }
@@ -505,7 +511,7 @@ function validateForm() {
                     question_id: row.dataset.questionId
                 }, "WARN");
 
-                alert("Mỗi tiêu chí phải có ít nhất một minh chứng: mô tả minh chứng hoặc tệp đính kèm.");
+                alert(I18N.alert_missing_evidence);
 
                 if (evidenceTextarea) {
                     evidenceTextarea.focus();
@@ -530,10 +536,7 @@ function validateForm() {
 
     if (totalMB > 50) {
         const confirmed = confirm(
-            `⚠️ Tổng dung lượng file minh chứng đang là ${totalMB.toFixed(1)} MB.\n\n` +
-            `File lớn có thể mất nhiều thời gian để tải lên (vài phút). ` +
-            `Vui lòng không đóng trình duyệt trong khi chờ.\n\n` +
-            `Bạn có muốn tiếp tục nộp không?`
+            I18N.confirm_large_file.replace("{mb}", totalMB.toFixed(1))
         );
 
         if (!confirmed) {

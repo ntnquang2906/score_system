@@ -2,6 +2,9 @@
 session_start();
 
 require_once 'logger.php';
+require_once 'lang.php';
+
+initLang();
 
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     writeLog("ADMIN_BLOCKED_ACCESS", "Truy cập trang xem file bị chặn do chưa đăng nhập", [
@@ -51,7 +54,7 @@ if (!file_exists($filepath) || !is_file($filepath)) {
         "path" => $filepath
     ], "WARN");
 
-    die("File không tồn tại!");
+    die(t('view.file_not_found'));
 }
 
 if (strpos(realpath($filepath), realpath($resultsDir)) !== 0) {
@@ -60,7 +63,7 @@ if (strpos(realpath($filepath), realpath($resultsDir)) !== 0) {
         "path" => $filepath
     ], "WARN");
 
-    die("Quyền truy cập bị từ chối!");
+    die(t('view.access_denied'));
 }
 
 $content = removeBom(file_get_contents($filepath));
@@ -88,7 +91,7 @@ if (isset($_GET['export']) && $_GET['export'] === '1') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="<?php echo $LANG; ?>">
 
 <head>
     <meta charset="UTF-8">
@@ -97,7 +100,8 @@ if (isset($_GET['export']) && $_GET['export'] === '1') {
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-180.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title><?php echo htmlspecialchars($file); ?> - Dashboard</title>
+    <title><?php echo t('view.title', ['file' => htmlspecialchars($file)]); ?></title>
+    <link rel="stylesheet" href="i18n.css">
     <style>
         * {
             margin: 0;
@@ -116,6 +120,9 @@ if (isset($_GET['export']) && $_GET['export'] === '1') {
             color: white;
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
         .header .container {
@@ -188,6 +195,9 @@ if (isset($_GET['export']) && $_GET['export'] === '1') {
 
         .data-table {
             overflow-x: auto;
+            overflow-y: auto;
+            max-height: 75vh;
+            border: 1px solid #ddd;
         }
 
         table {
@@ -263,35 +273,38 @@ if (isset($_GET['export']) && $_GET['export'] === '1') {
     <div class="header">
         <div class="container">
             <h1>📄 <?php echo htmlspecialchars($file); ?></h1>
-            <a href="dashboard.php">← Quay lại Dashboard</a>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <?php echo langSwitchLinks(true); ?>
+                <a href="dashboard.php"><?php echo t('view.back_dashboard'); ?></a>
+            </div>
         </div>
     </div>
 
     <div class="container">
         <div class="section">
             <div class="toolbar">
-                <a href="?file=<?php echo urlencode($file); ?>&export=1">⬇️ Tải xuống Excel</a>
-                <a href="?file=<?php echo urlencode($file); ?>" onclick="window.print(); return false;">🖨️ In</a>
+                <a href="?file=<?php echo urlencode($file); ?>&export=1"><?php echo t('view.download_excel'); ?></a>
+                <a href="?file=<?php echo urlencode($file); ?>" onclick="window.print(); return false;"><?php echo t('view.print'); ?></a>
 
                 <?php if ($canEdit && $file !== 'results.tsv'): ?>
-                    <a class="edit-btn" href="edit_file.php?file=<?php echo urlencode($file); ?>">✏️ Chỉnh sửa</a>
+                    <a class="edit-btn" href="edit_file.php?file=<?php echo urlencode($file); ?>"><?php echo t('view.edit_btn'); ?></a>
                 <?php endif; ?>
             </div>
 
             <div class="file-info">
                 📁 <strong><?php echo htmlspecialchars($file); ?></strong>
                 <?php if ($canEdit): ?>
-                    <span class="role-note">Tài khoản có quyền sửa</span>
+                    <span class="role-note"><?php echo t('view.role_editor'); ?></span>
                 <?php else: ?>
-                    <span class="role-note">Chỉ xem</span>
+                    <span class="role-note"><?php echo t('view.role_viewer'); ?></span>
                 <?php endif; ?>
                 <br>
-                📊 Tổng <?php echo max(count($data) - 1, 0); ?> dòng dữ liệu |
-                ⏰ Cập nhật: <?php echo date('d/m/Y H:i:s', filemtime($filepath)); ?>
+                <?php echo t('view.total_rows_prefix'); ?><?php echo max(count($data) - 1, 0); ?><?php echo t('view.total_rows_suffix'); ?>
+                <?php echo t('view.updated_prefix'); ?><?php echo date('d/m/Y H:i:s', filemtime($filepath)); ?>
             </div>
 
             <?php if (empty($data)): ?>
-                <div class="empty-message">File không có dữ liệu.</div>
+                <div class="empty-message"><?php echo t('view.no_data'); ?></div>
             <?php else: ?>
                 <div class="data-table">
                     <table>

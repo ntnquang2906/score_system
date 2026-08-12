@@ -1,0 +1,31 @@
+.lang-switch {
+    display: inline-flex;
+    gap: 4px;
+    font-size: 13px;
+}
+
+.lang-switch a {
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.lang-switch a.active {
+    background: rgba(37, 99, 235, 0.15);
+    font-weight: bold;
+    border-color: rgba(37, 99, 235, 0.4);
+}
+
+.header .lang-switch a,
+.lang-switch.on-dark a {
+    color: white;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.header .lang-switch a.active,
+.lang-switch.on-dark a.active {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: white;
+}

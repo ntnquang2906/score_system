@@ -2,81 +2,96 @@
     "functions": {
         "basic": {
             "name": "Nghiên cứu cơ bản",
+            "name_en": "Basic research",
             "groups": [
                 {
                     "id": "DT1",
                     "title": "Đt1 - Quá trình triển khai",
+                    "title_en": "Dt1 - Implementation process",
                     "max": 20,
                     "criteria": [
                         {
                             "id": "basic_new_direction",
                             "text": "Có ban hành hướng nghiên cứu mới và có căn cứ gắn với công nghệ chiến lược/công nghệ mới nổi không?",
+                            "text_en": "Has a new research direction been issued, with a rationale linked to strategic/emerging technology?",
                             "max": 2,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 2
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi số/quyết định ban hành hướng nghiên cứu mới."
+                            "note_placeholder": "Ghi số/quyết định ban hành hướng nghiên cứu mới.",
+                            "note_placeholder_en": "Note the number/decision issuing the new research direction."
                         },
                         {
                             "id": "basic_outputs_new_direction",
                             "text": "Có từ 02 đề tài/công bố khoa học gắn trực tiếp với hướng nghiên cứu mới không?",
+                            "text_en": "Are there at least 2 projects/scientific publications directly linked to the new research direction?",
                             "max": 2,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 2
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi tên/số lượng đề tài, công bố liên quan."
+                            "note_placeholder": "Ghi tên/số lượng đề tài, công bố liên quan.",
+                            "note_placeholder_en": "Note the name(s)/number of related projects and publications."
                         },
                         {
                             "id": "basic_new_direction_hr",
                             "text": "Có nhóm nghiên cứu chuyên trách hoặc kế hoạch đào tạo phục vụ hướng mới không?",
+                            "text_en": "Is there a dedicated research group or training plan supporting the new direction?",
                             "max": 2,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 2
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi tên nhóm, số nhân lực, kế hoạch đào tạo."
+                            "note_placeholder": "Ghi tên nhóm, số nhân lực, kế hoạch đào tạo.",
+                            "note_placeholder_en": "Note the group name, headcount, and training plan."
                         },
                         {
                             "id": "basic_new_direction_infra",
                             "text": "Có hạ tầng hoặc liên kết hạ tầng phục vụ hướng nghiên cứu mới không?",
+                            "text_en": "Is there infrastructure, or an infrastructure partnership, supporting the new research direction?",
                             "max": 2,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 2
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi phòng lab, thiết bị, phần mềm hoặc đơn vị liên kết."
+                            "note_placeholder": "Ghi phòng lab, thiết bị, phần mềm hoặc đơn vị liên kết.",
+                            "note_placeholder_en": "Note the lab, equipment, software, or partner organization."
                         },
                         {
                             "id": "basic_leadership_role",
                             "text": "Lãnh đạo có chỉ đạo triển khai hướng nghiên cứu mới bằng quyết định/kế hoạch/chỉ tiêu không?",
+                            "text_en": "Has leadership directed the implementation of the new research direction via a decision/plan/target?",
                             "max": 2,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 2
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi quyết định, kế hoạch năm hoặc chỉ tiêu nội bộ."
+                            "note_placeholder": "Ghi quyết định, kế hoạch năm hoặc chỉ tiêu nội bộ.",
+                            "note_placeholder_en": "Note the decision, annual plan, or internal target."
                         },
                         {
                             "id": "basic_collaboration",
                             "text": "Có hợp tác nghiên cứu với đối tác phù hợp, có triển khai và có vai trò rõ ràng không?",
+                            "text_en": "Is there research collaboration with a suitable partner, with implementation and a clear role?",
                             "max": 5,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 5
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi tên đối tác, nội dung hợp tác, vai trò."
+                            "note_placeholder": "Ghi tên đối tác, nội dung hợp tác, vai trò.",
+                            "note_placeholder_en": "Note the partner's name, the scope of collaboration, and the role."
                         },
                         {
                             "id": "basic_integrity",
                             "text": "Có quy chế liêm chính khoa học và đạo đức nghiên cứu không?",
+                            "text_en": "Is there a research integrity and ethics policy in place?",
                             "max": 5,
                             "scoring": {
                                 "type": "integrity_penalty"
@@ -85,7 +100,8 @@
                             "inputs": [
                                 {
                                     "name": "retracted",
-                                    "label": "Số công bố bị thu hồi trong 3 năm"
+                                    "label": "Số công bố bị thu hồi trong 3 năm",
+                                    "label_en": "Number of publications retracted in the last 3 years"
                                 }
                             ]
                         }
@@ -94,11 +110,13 @@
                 {
                     "id": "DT2",
                     "title": "Đt2 - Kết quả đầu ra",
+                    "title_en": "Dt2 - Outputs",
                     "max": 30,
                     "criteria": [
                         {
                             "id": "basic_international_publication",
                             "text": "Có công bố quốc tế đạt ngưỡng tính điểm không?",
+                            "text_en": "Do international publications meet the scoring threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "weighted_range",
@@ -141,25 +159,30 @@
                             "inputs": [
                                 {
                                     "name": "q1",
-                                    "label": "Số bài Q1"
+                                    "label": "Số bài Q1",
+                                    "label_en": "Number of Q1 papers"
                                 },
                                 {
                                     "name": "q2",
-                                    "label": "Số bài Q2"
+                                    "label": "Số bài Q2",
+                                    "label_en": "Number of Q2 papers"
                                 },
                                 {
                                     "name": "q3",
-                                    "label": "Số bài Q3"
+                                    "label": "Số bài Q3",
+                                    "label_en": "Number of Q3 papers"
                                 },
                                 {
                                     "name": "q4",
-                                    "label": "Số bài Q4"
+                                    "label": "Số bài Q4",
+                                    "label_en": "Number of Q4 papers"
                                 }
                             ]
                         },
                         {
                             "id": "basic_fwci_hindex",
                             "text": "Có chỉ số FWCI/H-index đạt ngưỡng đánh giá không?",
+                            "text_en": "Do the FWCI/H-index metrics meet the assessment threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "basic_fwci_hindex"
@@ -168,25 +191,30 @@
                             "inputs": [
                                 {
                                     "name": "fwci_org",
-                                    "label": "FWCI đơn vị"
+                                    "label": "FWCI đơn vị",
+                                    "label_en": "Organization's FWCI"
                                 },
                                 {
                                     "name": "fwci_avg",
-                                    "label": "FWCI trung bình ngành/VN"
+                                    "label": "FWCI trung bình ngành/VN",
+                                    "label_en": "Sector/national average FWCI"
                                 },
                                 {
                                     "name": "hindex_org",
-                                    "label": "H-index đơn vị"
+                                    "label": "H-index đơn vị",
+                                    "label_en": "Organization's H-index"
                                 },
                                 {
                                     "name": "hindex_avg",
-                                    "label": "H-index trung bình ngành"
+                                    "label": "H-index trung bình ngành",
+                                    "label_en": "Sector average H-index"
                                 }
                             ]
                         },
                         {
                             "id": "basic_domestic_publication",
                             "text": "Có ấn phẩm khoa học trong nước/sách/báo cáo hội nghị đạt ngưỡng không?",
+                            "text_en": "Do domestic scientific publications/books/conference reports meet the threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "domestic_publication"
@@ -195,15 +223,18 @@
                             "inputs": [
                                 {
                                     "name": "sqt",
-                                    "label": "Sách quốc tế"
+                                    "label": "Sách quốc tế",
+                                    "label_en": "International books"
                                 },
                                 {
                                     "name": "str",
-                                    "label": "Sách/chuyên khảo trong nước"
+                                    "label": "Sách/chuyên khảo trong nước",
+                                    "label_en": "Domestic books/monographs"
                                 },
                                 {
                                     "name": "bc",
-                                    "label": "Báo cáo hội nghị"
+                                    "label": "Báo cáo hội nghị",
+                                    "label_en": "Conference reports"
                                 }
                             ]
                         }
@@ -212,11 +243,13 @@
                 {
                     "id": "DT3",
                     "title": "Đt3 - Hiệu quả sử dụng nguồn lực",
+                    "title_en": "Dt3 - Resource use efficiency",
                     "max": 25,
                     "criteria": [
                         {
                             "id": "basic_publication_fte",
                             "text": "Có số công bố quốc tế/FTE đạt ngưỡng so với trung bình quốc gia không?",
+                            "text_en": "Does the ratio of international publications per FTE meet the threshold relative to the national average?",
                             "max": 10,
                             "scoring": {
                                 "type": "ratio_range",
@@ -262,17 +295,20 @@
                             "inputs": [
                                 {
                                     "name": "t_org",
-                                    "label": "T đơn vị"
+                                    "label": "T đơn vị",
+                                    "label_en": "Organization's T"
                                 },
                                 {
                                     "name": "t_vn",
-                                    "label": "T VN ngành"
+                                    "label": "T VN ngành",
+                                    "label_en": "National sector T"
                                 }
                             ]
                         },
                         {
                             "id": "basic_cost_publication",
                             "text": "Có chi phí trung bình cho mỗi công bố đạt ngưỡng hiệu quả không?",
+                            "text_en": "Does the average cost per publication meet the efficiency threshold?",
                             "max": 5,
                             "scoring": {
                                 "type": "inverse_cost",
@@ -282,17 +318,20 @@
                             "inputs": [
                                 {
                                     "name": "threshold",
-                                    "label": "Ngưỡng tối thiểu"
+                                    "label": "Ngưỡng tối thiểu",
+                                    "label_en": "Minimum threshold"
                                 },
                                 {
                                     "name": "actual",
-                                    "label": "Chi phí thực tế"
+                                    "label": "Chi phí thực tế",
+                                    "label_en": "Actual cost"
                                 }
                             ]
                         },
                         {
                             "id": "basic_strong_group_budget",
                             "text": "Có tỷ trọng chi cho nhóm nghiên cứu mạnh đạt ngưỡng không?",
+                            "text_en": "Does the share of spending on strong research groups meet the threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "positive_ratio_cap",
@@ -302,11 +341,13 @@
                             "inputs": [
                                 {
                                     "name": "actual",
-                                    "label": "Tỷ lệ thực tế (%)"
+                                    "label": "Tỷ lệ thực tế (%)",
+                                    "label_en": "Actual rate (%)"
                                 },
                                 {
                                     "name": "threshold",
-                                    "label": "Ngưỡng tối đa (%)"
+                                    "label": "Ngưỡng tối đa (%)",
+                                    "label_en": "Maximum threshold (%)"
                                 }
                             ]
                         }
@@ -315,22 +356,26 @@
                 {
                     "id": "DT4",
                     "title": "Đt4 - Tác động",
+                    "title_en": "Dt4 - Impact",
                     "max": 25,
                     "criteria": [
                         {
                             "id": "basic_academic_impact",
                             "text": "Có tác động đến định hướng học thuật không?",
+                            "text_en": "Is there an impact on academic direction?",
                             "max": 10,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 10
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi kết quả tạo hướng nghiên cứu, chương trình nghiên cứu, seminar/thỉnh giảng."
+                            "note_placeholder": "Ghi kết quả tạo hướng nghiên cứu, chương trình nghiên cứu, seminar/thỉnh giảng.",
+                            "note_placeholder_en": "Note results such as new research directions, research programs, seminars/guest lectures."
                         },
                         {
                             "id": "basic_training_usage",
                             "text": "Có kết quả được sử dụng trong đào tạo đại học/sau đại học không?",
+                            "text_en": "Are results used in undergraduate/graduate training?",
                             "max": 10,
                             "scoring": {
                                 "type": "basic_training_usage"
@@ -339,17 +384,20 @@
                             "inputs": [
                                 {
                                     "name": "teaching_docs",
-                                    "label": "Số tài liệu giảng dạy chính thức"
+                                    "label": "Số tài liệu giảng dạy chính thức",
+                                    "label_en": "Number of official teaching materials"
                                 },
                                 {
                                     "name": "theses",
-                                    "label": "Số luận văn/luận án sử dụng kết quả"
+                                    "label": "Số luận văn/luận án sử dụng kết quả",
+                                    "label_en": "Number of theses/dissertations using the results"
                                 }
                             ]
                         },
                         {
                             "id": "basic_program_role",
                             "text": "Có vai trò trong chương trình KH&CN/ĐMST không?",
+                            "text_en": "Is there a role in an S&T/innovation program?",
                             "max": 5,
                             "scoring": {
                                 "type": "basic_program_role"
@@ -358,19 +406,23 @@
                             "inputs": [
                                 {
                                     "name": "intl_lead",
-                                    "label": "Số vai trò chủ nhiệm/điều phối CT quốc tế"
+                                    "label": "Số vai trò chủ nhiệm/điều phối CT quốc tế",
+                                    "label_en": "Number of lead/coordinator roles in international programs"
                                 },
                                 {
                                     "name": "national_board",
-                                    "label": "Số vai trò BCN CT quốc gia"
+                                    "label": "Số vai trò BCN CT quốc gia",
+                                    "label_en": "Number of management-board roles in national programs"
                                 },
                                 {
                                     "name": "intl_member",
-                                    "label": "Số vai trò thành viên chính CT quốc tế"
+                                    "label": "Số vai trò thành viên chính CT quốc tế",
+                                    "label_en": "Number of key-member roles in international programs"
                                 },
                                 {
                                     "name": "national_member",
-                                    "label": "Số vai trò thành viên CT quốc gia"
+                                    "label": "Số vai trò thành viên CT quốc gia",
+                                    "label_en": "Number of member roles in national programs"
                                 }
                             ]
                         }
@@ -380,37 +432,44 @@
         },
         "applied": {
             "name": "Nghiên cứu ứng dụng",
+            "name_en": "Applied research",
             "groups": [
                 {
                     "id": "DT1",
                     "title": "Đt1 - Quá trình triển khai",
+                    "title_en": "Dt1 - Implementation process",
                     "max": 20,
                     "criteria": [
                         {
                             "id": "applied_new_direction",
                             "text": "Có định hướng nghiên cứu mới gắn với công nghệ chiến lược/mới nổi không?",
+                            "text_en": "Is there a new research direction linked to strategic/emerging technology?",
                             "max": 10,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 10
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi quyết định/văn bản/hướng nghiên cứu liên quan."
+                            "note_placeholder": "Ghi quyết định/văn bản/hướng nghiên cứu liên quan.",
+                            "note_placeholder_en": "Note the related decision/document/research direction."
                         },
                         {
                             "id": "applied_collaboration",
                             "text": "Có hợp tác nghiên cứu phù hợp, có triển khai và vai trò rõ ràng không?",
+                            "text_en": "Is there suitable research collaboration, with implementation and a clear role?",
                             "max": 5,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 5
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi đối tác, nội dung triển khai, vai trò tổ chức."
+                            "note_placeholder": "Ghi đối tác, nội dung triển khai, vai trò tổ chức.",
+                            "note_placeholder_en": "Note the partner, the implementation scope, and the organization's role."
                         },
                         {
                             "id": "applied_integrity",
                             "text": "Có cơ chế bảo đảm liêm chính khoa học và đạo đức nghiên cứu không?",
+                            "text_en": "Is there a mechanism ensuring research integrity and ethics?",
                             "max": 5,
                             "scoring": {
                                 "type": "integrity_penalty"
@@ -419,7 +478,8 @@
                             "inputs": [
                                 {
                                     "name": "retracted",
-                                    "label": "Số công bố bị thu hồi trong 3 năm"
+                                    "label": "Số công bố bị thu hồi trong 3 năm",
+                                    "label_en": "Number of publications retracted in the last 3 years"
                                 }
                             ]
                         }
@@ -428,11 +488,13 @@
                 {
                     "id": "DT2",
                     "title": "Đt2 - Kết quả đầu ra",
+                    "title_en": "Dt2 - Outputs",
                     "max": 30,
                     "criteria": [
                         {
                             "id": "applied_publication",
                             "text": "Có công bố khoa học đạt ngưỡng không?",
+                            "text_en": "Do scientific publications meet the threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "weighted_range",
@@ -478,37 +540,45 @@
                             "inputs": [
                                 {
                                     "name": "q12",
-                                    "label": "Số bài Q1/Q2"
+                                    "label": "Số bài Q1/Q2",
+                                    "label_en": "Number of Q1/Q2 papers"
                                 },
                                 {
                                     "name": "q34",
-                                    "label": "Số bài Q3/Q4"
+                                    "label": "Số bài Q3/Q4",
+                                    "label_en": "Number of Q3/Q4 papers"
                                 },
                                 {
                                     "name": "conf",
-                                    "label": "Hội nghị quốc tế"
+                                    "label": "Hội nghị quốc tế",
+                                    "label_en": "International conferences"
                                 },
                                 {
                                     "name": "v1",
-                                    "label": "Tạp chí VN loại 1"
+                                    "label": "Tạp chí VN loại 1",
+                                    "label_en": "Vietnamese journal, category 1"
                                 },
                                 {
                                     "name": "v2",
-                                    "label": "Tạp chí VN loại 2"
+                                    "label": "Tạp chí VN loại 2",
+                                    "label_en": "Vietnamese journal, category 2"
                                 },
                                 {
                                     "name": "v3",
-                                    "label": "Tạp chí VN loại 3"
+                                    "label": "Tạp chí VN loại 3",
+                                    "label_en": "Vietnamese journal, category 3"
                                 },
                                 {
                                     "name": "v4",
-                                    "label": "Tạp chí VN loại 4"
+                                    "label": "Tạp chí VN loại 4",
+                                    "label_en": "Vietnamese journal, category 4"
                                 }
                             ]
                         },
                         {
                             "id": "applied_ip",
                             "text": "Có sáng chế/giải pháp hữu ích/đơn đăng ký được chấp nhận không?",
+                            "text_en": "Are there patents/utility solutions/accepted applications?",
                             "max": 10,
                             "scoring": {
                                 "type": "ip_applied"
@@ -517,25 +587,30 @@
                             "inputs": [
                                 {
                                     "name": "patent",
-                                    "label": "Bằng sáng chế"
+                                    "label": "Bằng sáng chế",
+                                    "label_en": "Patents"
                                 },
                                 {
                                     "name": "utility",
-                                    "label": "Giải pháp hữu ích/IC/giống"
+                                    "label": "Giải pháp hữu ích/IC/giống",
+                                    "label_en": "Utility solutions/IC layout/plant variety"
                                 },
                                 {
                                     "name": "application",
-                                    "label": "Đơn được chấp nhận"
+                                    "label": "Đơn được chấp nhận",
+                                    "label_en": "Accepted applications"
                                 },
                                 {
                                     "name": "intl_bonus",
-                                    "label": "Bằng quốc tế? nhập 1 nếu có"
+                                    "label": "Bằng quốc tế? nhập 1 nếu có",
+                                    "label_en": "International patent? enter 1 if yes"
                                 }
                             ]
                         },
                         {
                             "id": "applied_prototype",
                             "text": "Có mô hình thử nghiệm/thông số kỹ thuật đạt ngưỡng không?",
+                            "text_en": "Do test models/technical specifications meet the threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "capped_weighted_sum",
@@ -550,15 +625,18 @@
                             "inputs": [
                                 {
                                     "name": "lab",
-                                    "label": "Mô hình lab"
+                                    "label": "Mô hình lab",
+                                    "label_en": "Lab model"
                                 },
                                 {
                                     "name": "simulation",
-                                    "label": "Mẫu mô phỏng sản xuất"
+                                    "label": "Mẫu mô phỏng sản xuất",
+                                    "label_en": "Production simulation sample"
                                 },
                                 {
                                     "name": "pilot",
-                                    "label": "Pilot/bán sản xuất"
+                                    "label": "Pilot/bán sản xuất",
+                                    "label_en": "Pilot/semi-production"
                                 }
                             ]
                         }
@@ -567,11 +645,13 @@
                 {
                     "id": "DT3",
                     "title": "Đt3 - Hiệu quả sử dụng nguồn lực",
+                    "title_en": "Dt3 - Resource use efficiency",
                     "max": 25,
                     "criteria": [
                         {
                             "id": "applied_ip_fte",
                             "text": "Có năng suất sở hữu trí tuệ/FTE đạt ngưỡng không?",
+                            "text_en": "Does IP output per FTE meet the threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "ip_fte_range"
@@ -580,21 +660,25 @@
                             "inputs": [
                                 {
                                     "name": "ip_score",
-                                    "label": "Tổng điểm IP"
+                                    "label": "Tổng điểm IP",
+                                    "label_en": "Total IP score"
                                 },
                                 {
                                     "name": "fte",
-                                    "label": "FTE"
+                                    "label": "FTE",
+                                    "label_en": "FTE"
                                 },
                                 {
                                     "name": "benchmark",
-                                    "label": "Trung bình quốc gia"
+                                    "label": "Trung bình quốc gia",
+                                    "label_en": "National average"
                                 }
                             ]
                         },
                         {
                             "id": "applied_cost_output",
                             "text": "Có chi phí trung bình cho mỗi kết quả công nghệ/IP đạt ngưỡng không?",
+                            "text_en": "Does the average cost per technology/IP output meet the threshold?",
                             "max": 5,
                             "scoring": {
                                 "type": "cost_output_applied"
@@ -603,13 +687,15 @@
                             "inputs": [
                                 {
                                     "name": "cost",
-                                    "label": "Chi phí trung bình/đầu ra, triệu VNĐ"
+                                    "label": "Chi phí trung bình/đầu ra, triệu VNĐ",
+                                    "label_en": "Average cost per output, million VND"
                                 }
                             ]
                         },
                         {
                             "id": "applied_external_revenue",
                             "text": "Có tỷ lệ doanh thu bên ngoài trên tổng doanh thu đạt ngưỡng không?",
+                            "text_en": "Does the ratio of external revenue to total revenue meet the threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "external_revenue_ratio"
@@ -618,11 +704,13 @@
                             "inputs": [
                                 {
                                     "name": "external",
-                                    "label": "Doanh thu bên ngoài"
+                                    "label": "Doanh thu bên ngoài",
+                                    "label_en": "External revenue"
                                 },
                                 {
                                     "name": "total",
-                                    "label": "Tổng doanh thu"
+                                    "label": "Tổng doanh thu",
+                                    "label_en": "Total revenue"
                                 }
                             ]
                         }
@@ -631,33 +719,39 @@
                 {
                     "id": "DT4",
                     "title": "Đt4 - Tác động",
+                    "title_en": "Dt4 - Impact",
                     "max": 25,
                     "criteria": [
                         {
                             "id": "applied_adoption",
                             "text": "Có kết quả nghiên cứu được tiếp nhận/sử dụng/phát triển tiếp không?",
+                            "text_en": "Have research results been adopted, used, or further developed?",
                             "max": 10,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 10
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi đơn vị tiếp nhận, hình thức sử dụng/phát triển tiếp."
+                            "note_placeholder": "Ghi đơn vị tiếp nhận, hình thức sử dụng/phát triển tiếp.",
+                            "note_placeholder_en": "Note the receiving organization and the form of use/further development."
                         },
                         {
                             "id": "applied_standard",
                             "text": "Có kết quả được dùng làm căn cứ ban hành tiêu chuẩn/định mức kỹ thuật ngành không?",
+                            "text_en": "Have results been used as a basis for issuing sector technical standards/norms?",
                             "max": 10,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 10
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi tiêu chuẩn, định mức, quyết định/thông tư liên quan."
+                            "note_placeholder": "Ghi tiêu chuẩn, định mức, quyết định/thông tư liên quan.",
+                            "note_placeholder_en": "Note the related standard, norm, decision/circular."
                         },
                         {
                             "id": "applied_linkage",
                             "text": "Có mô hình/báo cáo/sản phẩm thúc đẩy liên kết viện-trường-doanh nghiệp không?",
+                            "text_en": "Are there models/reports/products promoting institute-university-enterprise linkages?",
                             "max": 5,
                             "scoring": {
                                 "type": "capped_weighted_sum",
@@ -672,15 +766,18 @@
                             "inputs": [
                                 {
                                     "name": "model",
-                                    "label": "Số mô hình liên kết"
+                                    "label": "Số mô hình liên kết",
+                                    "label_en": "Number of linkage models"
                                 },
                                 {
                                     "name": "report",
-                                    "label": "Số báo cáo lan truyền tri thức"
+                                    "label": "Số báo cáo lan truyền tri thức",
+                                    "label_en": "Number of knowledge-dissemination reports"
                                 },
                                 {
                                     "name": "product",
-                                    "label": "Số sản phẩm/hệ sinh thái"
+                                    "label": "Số sản phẩm/hệ sinh thái",
+                                    "label_en": "Number of products/ecosystems"
                                 }
                             ]
                         }
@@ -690,26 +787,31 @@
         },
         "tech": {
             "name": "Phát triển công nghệ",
+            "name_en": "Technology development",
             "groups": [
                 {
                     "id": "DT1",
                     "title": "Đt1 - Quá trình triển khai",
+                    "title_en": "Dt1 - Implementation process",
                     "max": 20,
                     "criteria": [
                         {
                             "id": "tech_design_verify",
                             "text": "Có thiết kế, tích hợp, kiểm chứng và quy trình kiểm soát kỹ thuật không?",
+                            "text_en": "Is there design, integration, verification, and a technical control process?",
                             "max": 5,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 5
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi quy trình kiểm soát, nhân lực, hạ tầng, tỷ lệ nhiệm vụ tuân thủ."
+                            "note_placeholder": "Ghi quy trình kiểm soát, nhân lực, hạ tầng, tỷ lệ nhiệm vụ tuân thủ.",
+                            "note_placeholder_en": "Note the control process, personnel, infrastructure, and task compliance rate."
                         },
                         {
                             "id": "tech_localization",
                             "text": "Có mức độ nội địa hóa/làm chủ công nghệ đạt ngưỡng không?",
+                            "text_en": "Does the level of localization/technology mastery meet the threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "tech_localization"
@@ -718,35 +820,41 @@
                             "inputs": [
                                 {
                                     "name": "p_lc",
-                                    "label": "P_LC (%)"
+                                    "label": "P_LC (%)",
+                                    "label_en": "P_LC (%)"
                                 },
                                 {
                                     "name": "p_ndh",
-                                    "label": "P_NĐH (%)"
+                                    "label": "P_NĐH (%)",
+                                    "label_en": "P_NDH (%)"
                                 }
                             ]
                         },
                         {
                             "id": "tech_enterprise_link",
                             "text": "Có liên kết sản xuất thử nghiệm/sản xuất với doanh nghiệp không?",
+                            "text_en": "Is there a pilot-production/production linkage with an enterprise?",
                             "max": 5,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 5
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi hợp đồng/MOU, doanh nghiệp, bàn giao kỹ thuật, đo kiểm."
+                            "note_placeholder": "Ghi hợp đồng/MOU, doanh nghiệp, bàn giao kỹ thuật, đo kiểm.",
+                            "note_placeholder_en": "Note the contract/MOU, enterprise, technical handover, and testing."
                         }
                     ]
                 },
                 {
                     "id": "DT2",
                     "title": "Đt2 - Kết quả đầu ra",
+                    "title_en": "Dt2 - Outputs",
                     "max": 30,
                     "criteria": [
                         {
                             "id": "tech_ip_commercialized",
                             "text": "Có IP được thương mại hóa/chào bán/MOU sản xuất thử không?",
+                            "text_en": "Has IP been commercialized/offered for sale/covered by a pilot-production MOU?",
                             "max": 10,
                             "scoring": {
                                 "type": "capped_weighted_sum",
@@ -761,21 +869,25 @@
                             "inputs": [
                                 {
                                     "name": "a",
-                                    "label": "Số loại A"
+                                    "label": "Số loại A",
+                                    "label_en": "Number of type A"
                                 },
                                 {
                                     "name": "b",
-                                    "label": "Số loại B"
+                                    "label": "Số loại B",
+                                    "label_en": "Number of type B"
                                 },
                                 {
                                     "name": "c",
-                                    "label": "Số loại C"
+                                    "label": "Số loại C",
+                                    "label_en": "Number of type C"
                                 }
                             ]
                         },
                         {
                             "id": "tech_product_certified",
                             "text": "Có sản phẩm thử nghiệm đạt tiêu chuẩn kỹ thuật/kiểm định độc lập không?",
+                            "text_en": "Do test products meet technical standards/independent certification?",
                             "max": 10,
                             "scoring": {
                                 "type": "capped_weighted_sum",
@@ -791,25 +903,30 @@
                             "inputs": [
                                 {
                                     "name": "a",
-                                    "label": "Số loại A"
+                                    "label": "Số loại A",
+                                    "label_en": "Number of type A"
                                 },
                                 {
                                     "name": "b",
-                                    "label": "Số loại B"
+                                    "label": "Số loại B",
+                                    "label_en": "Number of type B"
                                 },
                                 {
                                     "name": "c",
-                                    "label": "Số loại C"
+                                    "label": "Số loại C",
+                                    "label_en": "Number of type C"
                                 },
                                 {
                                     "name": "d",
-                                    "label": "Số loại D"
+                                    "label": "Số loại D",
+                                    "label_en": "Number of type D"
                                 }
                             ]
                         },
                         {
                             "id": "tech_process_transfer",
                             "text": "Có quy trình công nghệ được hoàn thiện và chuyển giao không?",
+                            "text_en": "Has a technology process been finalized and transferred?",
                             "max": 10,
                             "scoring": {
                                 "type": "capped_weighted_sum",
@@ -826,23 +943,28 @@
                             "inputs": [
                                 {
                                     "name": "level5",
-                                    "label": "Số quy trình mức 5"
+                                    "label": "Số quy trình mức 5",
+                                    "label_en": "Number of level-5 processes"
                                 },
                                 {
                                     "name": "level4",
-                                    "label": "Số quy trình mức 4"
+                                    "label": "Số quy trình mức 4",
+                                    "label_en": "Number of level-4 processes"
                                 },
                                 {
                                     "name": "level3",
-                                    "label": "Số quy trình mức 3"
+                                    "label": "Số quy trình mức 3",
+                                    "label_en": "Number of level-3 processes"
                                 },
                                 {
                                     "name": "level2",
-                                    "label": "Số quy trình mức 2"
+                                    "label": "Số quy trình mức 2",
+                                    "label_en": "Number of level-2 processes"
                                 },
                                 {
                                     "name": "level1",
-                                    "label": "Số quy trình mức 1"
+                                    "label": "Số quy trình mức 1",
+                                    "label_en": "Number of level-1 processes"
                                 }
                             ]
                         }
@@ -851,11 +973,13 @@
                 {
                     "id": "DT3",
                     "title": "Đt3 - Hiệu quả sử dụng nguồn lực",
+                    "title_en": "Dt3 - Resource use efficiency",
                     "max": 25,
                     "criteria": [
                         {
                             "id": "tech_commercialization_rate",
                             "text": "Có tỷ lệ thương mại hóa của kết quả đầu ra đạt ngưỡng không?",
+                            "text_en": "Does the commercialization rate of outputs meet the threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "tech_commercialization_rate"
@@ -864,17 +988,20 @@
                             "inputs": [
                                 {
                                     "name": "commercialized",
-                                    "label": "Số kết quả đã thương mại hóa"
+                                    "label": "Số kết quả đã thương mại hóa",
+                                    "label_en": "Number of commercialized outputs"
                                 },
                                 {
                                     "name": "total",
-                                    "label": "Tổng kết quả đầu ra"
+                                    "label": "Tổng kết quả đầu ra",
+                                    "label_en": "Total outputs"
                                 }
                             ]
                         },
                         {
                             "id": "tech_roi",
                             "text": "Có tỷ lệ doanh thu/chi phí R&D đạt ngưỡng không?",
+                            "text_en": "Does the revenue-to-R&D-cost ratio meet the threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "tech_roi"
@@ -883,21 +1010,25 @@
                             "inputs": [
                                 {
                                     "name": "revenue",
-                                    "label": "Doanh thu từ R&D"
+                                    "label": "Doanh thu từ R&D",
+                                    "label_en": "Revenue from R&D"
                                 },
                                 {
                                     "name": "cost",
-                                    "label": "Chi phí R&D"
+                                    "label": "Chi phí R&D",
+                                    "label_en": "R&D cost"
                                 },
                                 {
                                     "name": "years",
-                                    "label": "Chu kỳ: nhập 3 hoặc 5"
+                                    "label": "Chu kỳ: nhập 3 hoặc 5",
+                                    "label_en": "Period: enter 3 or 5"
                                 }
                             ]
                         },
                         {
                             "id": "tech_spinoff",
                             "text": "Có doanh nghiệp khởi nghiệp sáng tạo/spin-off hình thành trong 3 năm gần nhất không?",
+                            "text_en": "Have innovative startups/spin-offs been formed in the last 3 years?",
                             "max": 5,
                             "scoring": {
                                 "type": "capped_weighted_sum",
@@ -911,11 +1042,13 @@
                             "inputs": [
                                 {
                                     "name": "early",
-                                    "label": "Số spin-off mới"
+                                    "label": "Số spin-off mới",
+                                    "label_en": "Number of new spin-offs"
                                 },
                                 {
                                     "name": "profitable",
-                                    "label": "Số spin-off có đơn hàng/có lãi"
+                                    "label": "Số spin-off có đơn hàng/có lãi",
+                                    "label_en": "Number of spin-offs with orders/profitable"
                                 }
                             ]
                         }
@@ -924,11 +1057,13 @@
                 {
                     "id": "DT4",
                     "title": "Đt4 - Tác động",
+                    "title_en": "Dt4 - Impact",
                     "max": 25,
                     "criteria": [
                         {
                             "id": "tech_enterprise_capacity",
                             "text": "Có nâng cao năng lực công nghệ cho doanh nghiệp không?",
+                            "text_en": "Has enterprise technological capacity been improved?",
                             "max": 10,
                             "scoring": {
                                 "type": "capped_weighted_sum",
@@ -944,25 +1079,30 @@
                             "inputs": [
                                 {
                                     "name": "consulting",
-                                    "label": "Số DN được tư vấn cải tiến"
+                                    "label": "Số DN được tư vấn cải tiến",
+                                    "label_en": "Number of enterprises given improvement consulting"
                                 },
                                 {
                                     "name": "training",
-                                    "label": "Số DN được đào tạo nhân lực"
+                                    "label": "Số DN được đào tạo nhân lực",
+                                    "label_en": "Number of enterprises given personnel training"
                                 },
                                 {
                                     "name": "testing",
-                                    "label": "Số DN được hỗ trợ thử nghiệm"
+                                    "label": "Số DN được hỗ trợ thử nghiệm",
+                                    "label_en": "Number of enterprises given testing support"
                                 },
                                 {
                                     "name": "standard",
-                                    "label": "Số DN được xây dựng tiêu chuẩn"
+                                    "label": "Số DN được xây dựng tiêu chuẩn",
+                                    "label_en": "Number of enterprises given standards development support"
                                 }
                             ]
                         },
                         {
                             "id": "tech_social_environment",
                             "text": "Có tác động xã hội/môi trường được chứng minh không?",
+                            "text_en": "Is there a demonstrated social/environmental impact?",
                             "max": 10,
                             "scoring": {
                                 "type": "tech_social_environment"
@@ -971,33 +1111,40 @@
                             "inputs": [
                                 {
                                     "name": "social_breakthrough",
-                                    "label": "Số tác động xã hội đột phá"
+                                    "label": "Số tác động xã hội đột phá",
+                                    "label_en": "Number of breakthrough social impacts"
                                 },
                                 {
                                     "name": "social_value",
-                                    "label": "Số tác động xã hội có giá trị"
+                                    "label": "Số tác động xã hội có giá trị",
+                                    "label_en": "Number of valuable social impacts"
                                 },
                                 {
                                     "name": "social_basic",
-                                    "label": "Số tác động xã hội cơ bản"
+                                    "label": "Số tác động xã hội cơ bản",
+                                    "label_en": "Number of basic social impacts"
                                 },
                                 {
                                     "name": "env_breakthrough",
-                                    "label": "Số tác động môi trường đột phá"
+                                    "label": "Số tác động môi trường đột phá",
+                                    "label_en": "Number of breakthrough environmental impacts"
                                 },
                                 {
                                     "name": "env_value",
-                                    "label": "Số tác động môi trường có giá trị"
+                                    "label": "Số tác động môi trường có giá trị",
+                                    "label_en": "Number of valuable environmental impacts"
                                 },
                                 {
                                     "name": "env_basic",
-                                    "label": "Số tác động môi trường cơ bản"
+                                    "label": "Số tác động môi trường cơ bản",
+                                    "label_en": "Number of basic environmental impacts"
                                 }
                             ]
                         },
                         {
                             "id": "tech_field_capacity",
                             "text": "Có tác động nâng cao năng lực công nghệ của lĩnh vực nghiên cứu không?",
+                            "text_en": "Is there an impact improving the technological capacity of the research field?",
                             "max": 5,
                             "scoring": {
                                 "type": "capped_weighted_sum",
@@ -1012,15 +1159,18 @@
                             "inputs": [
                                 {
                                     "name": "replace_tech",
-                                    "label": "Số tác động thay thế công nghệ"
+                                    "label": "Số tác động thay thế công nghệ",
+                                    "label_en": "Number of technology-replacement impacts"
                                 },
                                 {
                                     "name": "replace_import",
-                                    "label": "Số tác động thay thế sản phẩm nhập khẩu"
+                                    "label": "Số tác động thay thế sản phẩm nhập khẩu",
+                                    "label_en": "Number of import-substitution impacts"
                                 },
                                 {
                                     "name": "diffusion",
-                                    "label": "Số tác động ứng dụng lan tỏa"
+                                    "label": "Số tác động ứng dụng lan tỏa",
+                                    "label_en": "Number of diffusion/application impacts"
                                 }
                             ]
                         }
@@ -1030,37 +1180,44 @@
         },
         "policy": {
             "name": "Nghiên cứu chính sách KT-XH",
+            "name_en": "Socio-economic policy research",
             "groups": [
                 {
                     "id": "DT1",
                     "title": "Đt1 - Quá trình triển khai",
+                    "title_en": "Dt1 - Implementation process",
                     "max": 20,
                     "criteria": [
                         {
                             "id": "policy_new_direction",
                             "text": "Có định hướng nghiên cứu rõ ràng, phù hợp và thích ứng với nhu cầu xã hội không?",
+                            "text_en": "Is there a clear research direction, suitable and responsive to social needs?",
                             "max": 10,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 10
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi quyết định/văn bản/hướng nghiên cứu liên quan."
+                            "note_placeholder": "Ghi quyết định/văn bản/hướng nghiên cứu liên quan.",
+                            "note_placeholder_en": "Note the related decision/document/research direction."
                         },
                         {
                             "id": "policy_collaboration",
                             "text": "Có hợp tác nghiên cứu phù hợp, có triển khai và vai trò rõ ràng không?",
+                            "text_en": "Is there suitable research collaboration, with implementation and a clear role?",
                             "max": 5,
                             "scoring": {
                                 "type": "fixed",
                                 "score": 5
                             },
                             "display_mode": "qualitative",
-                            "note_placeholder": "Ghi đối tác, nội dung triển khai, vai trò tổ chức."
+                            "note_placeholder": "Ghi đối tác, nội dung triển khai, vai trò tổ chức.",
+                            "note_placeholder_en": "Note the partner, the implementation scope, and the organization's role."
                         },
                         {
                             "id": "policy_integrity",
                             "text": "Có cơ chế bảo đảm liêm chính khoa học và đạo đức nghiên cứu không?",
+                            "text_en": "Is there a mechanism ensuring research integrity and ethics?",
                             "max": 5,
                             "scoring": {
                                 "type": "integrity_penalty"
@@ -1069,7 +1226,8 @@
                             "inputs": [
                                 {
                                     "name": "retracted",
-                                    "label": "Số công bố bị thu hồi trong 3 năm"
+                                    "label": "Số công bố bị thu hồi trong 3 năm",
+                                    "label_en": "Number of publications retracted in the last 3 years"
                                 }
                             ]
                         }
@@ -1078,11 +1236,13 @@
                 {
                     "id": "DT2",
                     "title": "Đt2 - Kết quả đầu ra",
+                    "title_en": "Dt2 - Outputs",
                     "max": 30,
                     "criteria": [
                         {
                             "id": "policy_publication",
                             "text": "Có công bố khoa học đạt ngưỡng không?",
+                            "text_en": "Do scientific publications meet the threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "weighted_range",
@@ -1128,37 +1288,45 @@
                             "inputs": [
                                 {
                                     "name": "q12",
-                                    "label": "Số bài Q1/Q2"
+                                    "label": "Số bài Q1/Q2",
+                                    "label_en": "Number of Q1/Q2 papers"
                                 },
                                 {
                                     "name": "q34",
-                                    "label": "Số bài Q3/Q4"
+                                    "label": "Số bài Q3/Q4",
+                                    "label_en": "Number of Q3/Q4 papers"
                                 },
                                 {
                                     "name": "conf",
-                                    "label": "Hội nghị quốc tế"
+                                    "label": "Hội nghị quốc tế",
+                                    "label_en": "International conferences"
                                 },
                                 {
                                     "name": "v1",
-                                    "label": "Tạp chí VN loại 1"
+                                    "label": "Tạp chí VN loại 1",
+                                    "label_en": "Vietnamese journal, category 1"
                                 },
                                 {
                                     "name": "v2",
-                                    "label": "Tạp chí VN loại 2"
+                                    "label": "Tạp chí VN loại 2",
+                                    "label_en": "Vietnamese journal, category 2"
                                 },
                                 {
                                     "name": "v3",
-                                    "label": "Tạp chí VN loại 3"
+                                    "label": "Tạp chí VN loại 3",
+                                    "label_en": "Vietnamese journal, category 3"
                                 },
                                 {
                                     "name": "v4",
-                                    "label": "Tạp chí VN loại 4"
+                                    "label": "Tạp chí VN loại 4",
+                                    "label_en": "Vietnamese journal, category 4"
                                 }
                             ]
                         },
                         {
                             "id": "policy_scientific_publication",
                             "text": "Có ấn phẩm khoa học đạt ngưỡng không?",
+                            "text_en": "Do scientific books/monographs/conference reports meet the threshold?",
                             "max": 10,
                             "scoring": {
                                 "type": "domestic_publication"
@@ -1167,21 +1335,25 @@
                             "inputs": [
                                 {
                                     "name": "sqt",
-                                    "label": "Sách quốc tế"
+                                    "label": "Sách quốc tế",
+                                    "label_en": "International books"
                                 },
                                 {
                                     "name": "str",
-                                    "label": "Sách/chuyên khảo trong nước"
+                                    "label": "Sách/chuyên khảo trong nước",
+                                    "label_en": "Domestic books/monographs"
                                 },
                                 {
                                     "name": "bc",
-                                    "label": "Báo cáo hội nghị"
+                                    "label": "Báo cáo hội nghị",
+                                    "label_en": "Conference reports"
                                 }
                             ]
                         },
                         {
                             "id": "policy_recommendation",
                             "text": "Có kết quả nghiên cứu được đề xuất/kiến nghị trong hoạch định chiến lược/chính sách không?",
+                            "text_en": "Have research results been proposed/recommended in strategic or policy planning?",
                             "max": 10,
                             "scoring": {
                                 "type": "policy_recommendation"
@@ -1190,23 +1362,28 @@
                             "inputs": [
                                 {
                                     "name": "local_1_2",
-                                    "label": "Số đề xuất cấp địa phương đã gửi/tiếp nhận"
+                                    "label": "Số đề xuất cấp địa phương đã gửi/tiếp nhận",
+                                    "label_en": "Number of local-level proposals submitted/received"
                                 },
                                 {
                                     "name": "local_or_ministry_3",
-                                    "label": "Số đề xuất cấp địa phương/Bộ có phản hồi"
+                                    "label": "Số đề xuất cấp địa phương/Bộ có phản hồi",
+                                    "label_en": "Number of local/ministry-level proposals with a response"
                                 },
                                 {
                                     "name": "sector_3",
-                                    "label": "Số đề xuất cấp ngành/liên ngành được xem xét"
+                                    "label": "Số đề xuất cấp ngành/liên ngành được xem xét",
+                                    "label_en": "Number of sector/inter-sector proposals under review"
                                 },
                                 {
                                     "name": "official_5",
-                                    "label": "Số đề xuất gửi chính thức tới cơ quan có thẩm quyền"
+                                    "label": "Số đề xuất gửi chính thức tới cơ quan có thẩm quyền",
+                                    "label_en": "Number of proposals formally submitted to a competent authority"
                                 },
                                 {
                                     "name": "written_response_2",
-                                    "label": "Số đề xuất được phản hồi/công nhận/trích dẫn/đưa vào xây dựng chính sách"
+                                    "label": "Số đề xuất được phản hồi/công nhận/trích dẫn/đưa vào xây dựng chính sách",
+                                    "label_en": "Number of proposals acknowledged/cited/incorporated into policy-making"
                                 }
                             ]
                         }
@@ -1215,11 +1392,13 @@
                 {
                     "id": "DT3",
                     "title": "Đt3 - Hiệu quả sử dụng nguồn lực",
+                    "title_en": "Dt3 - Resource use efficiency",
                     "max": 25,
                     "criteria": [
                         {
                             "id": "policy_applied",
                             "text": "Có kết quả nghiên cứu được áp dụng trong hoạch định chiến lược/chính sách/thể chế hóa không?",
+                            "text_en": "Have research results been applied in strategic planning, policy-making, or institutionalization?",
                             "max": 10,
                             "scoring": {
                                 "type": "policy_applied"
@@ -1228,29 +1407,35 @@
                             "inputs": [
                                 {
                                     "name": "referenced",
-                                    "label": "Số KQNC được tham khảo/sử dụng hạn chế"
+                                    "label": "Số KQNC được tham khảo/sử dụng hạn chế",
+                                    "label_en": "Number of research results referenced/used to a limited extent"
                                 },
                                 {
                                     "name": "partial_modify",
-                                    "label": "Số KQNC sửa đổi một phần chính sách"
+                                    "label": "Số KQNC sửa đổi một phần chính sách",
+                                    "label_en": "Number of research results that partially revised a policy"
                                 },
                                 {
                                     "name": "multiple_modify",
-                                    "label": "Số KQNC sửa đổi từ 2 chính sách trở lên"
+                                    "label": "Số KQNC sửa đổi từ 2 chính sách trở lên",
+                                    "label_en": "Number of research results that revised 2 or more policies"
                                 },
                                 {
                                     "name": "replace",
-                                    "label": "Số KQNC thay thế chính sách cũ"
+                                    "label": "Số KQNC thay thế chính sách cũ",
+                                    "label_en": "Number of research results that replaced an old policy"
                                 },
                                 {
                                     "name": "new_build",
-                                    "label": "Số KQNC xây dựng mới chính sách/văn bản"
+                                    "label": "Số KQNC xây dựng mới chính sách/văn bản",
+                                    "label_en": "Number of research results that created a new policy/document"
                                 }
                             ]
                         },
                         {
                             "id": "policy_advisory",
                             "text": "Có khả năng tư vấn, phản biện chính sách được minh chứng không?",
+                            "text_en": "Is there demonstrated capacity for policy advisory/critique?",
                             "max": 10,
                             "scoring": {
                                 "type": "policy_advisory"
@@ -1259,29 +1444,35 @@
                             "inputs": [
                                 {
                                     "name": "low",
-                                    "label": "Số hoạt động cấp thấp"
+                                    "label": "Số hoạt động cấp thấp",
+                                    "label_en": "Number of low-level activities"
                                 },
                                 {
                                     "name": "local",
-                                    "label": "Số hoạt động cấp địa phương/tổ chức trung gian"
+                                    "label": "Số hoạt động cấp địa phương/tổ chức trung gian",
+                                    "label_en": "Number of local/intermediary-organization activities"
                                 },
                                 {
                                     "name": "dialogue",
-                                    "label": "Số đối thoại chính sách cấp cao"
+                                    "label": "Số đối thoại chính sách cấp cao",
+                                    "label_en": "Number of high-level policy dialogues"
                                 },
                                 {
                                     "name": "ministry",
-                                    "label": "Số lần hội đồng cấp Bộ/ngành"
+                                    "label": "Số lần hội đồng cấp Bộ/ngành",
+                                    "label_en": "Number of ministry/sector-level council sessions"
                                 },
                                 {
                                     "name": "national",
-                                    "label": "Số lần hội đồng cấp Quốc gia"
+                                    "label": "Số lần hội đồng cấp Quốc gia",
+                                    "label_en": "Number of national-level council sessions"
                                 }
                             ]
                         },
                         {
                             "id": "policy_research_community",
                             "text": "Có ảnh hưởng trong cộng đồng nghiên cứu không?",
+                            "text_en": "Is there influence within the research community?",
                             "max": 5,
                             "scoring": {
                                 "type": "policy_community"
@@ -1290,19 +1481,23 @@
                             "inputs": [
                                 {
                                     "name": "board",
-                                    "label": "Số vai trò BCN/điều phối hội đồng/chương trình"
+                                    "label": "Số vai trò BCN/điều phối hội đồng/chương trình",
+                                    "label_en": "Number of management-board/coordinator roles for councils/programs"
                                 },
                                 {
                                     "name": "academic_policy",
-                                    "label": "Số lần tham gia xây dựng chính sách học thuật chuyên sâu"
+                                    "label": "Số lần tham gia xây dựng chính sách học thuật chuyên sâu",
+                                    "label_en": "Number of times contributing to in-depth academic policy-making"
                                 },
                                 {
                                     "name": "intl_member",
-                                    "label": "Số vai trò thành viên chính chương trình quốc tế"
+                                    "label": "Số vai trò thành viên chính chương trình quốc tế",
+                                    "label_en": "Number of key-member roles in international programs"
                                 },
                                 {
                                     "name": "intl_lead",
-                                    "label": "Số vai trò chủ nhiệm/điều phối chương trình quốc tế"
+                                    "label": "Số vai trò chủ nhiệm/điều phối chương trình quốc tế",
+                                    "label_en": "Number of lead/coordinator roles in international programs"
                                 }
                             ]
                         }
@@ -1311,11 +1506,13 @@
                 {
                     "id": "DT4",
                     "title": "Đt4 - Tác động",
+                    "title_en": "Dt4 - Impact",
                     "max": 25,
                     "criteria": [
                         {
                             "id": "policy_impact_ktxhmt",
                             "text": "Có tác động kinh tế - xã hội - môi trường không?",
+                            "text_en": "Is there an economic, social, or environmental impact?",
                             "max": 10,
                             "scoring": {
                                 "type": "policy_impact_ktxhmt"
@@ -1324,45 +1521,55 @@
                             "inputs": [
                                 {
                                     "name": "kt3",
-                                    "label": "Số tác động kinh tế mức 3"
+                                    "label": "Số tác động kinh tế mức 3",
+                                    "label_en": "Number of level-3 economic impacts"
                                 },
                                 {
                                     "name": "kt2",
-                                    "label": "Số tác động kinh tế mức 2"
+                                    "label": "Số tác động kinh tế mức 2",
+                                    "label_en": "Number of level-2 economic impacts"
                                 },
                                 {
                                     "name": "kt1",
-                                    "label": "Số tác động kinh tế mức 1"
+                                    "label": "Số tác động kinh tế mức 1",
+                                    "label_en": "Number of level-1 economic impacts"
                                 },
                                 {
                                     "name": "xh3",
-                                    "label": "Số tác động xã hội mức 3"
+                                    "label": "Số tác động xã hội mức 3",
+                                    "label_en": "Number of level-3 social impacts"
                                 },
                                 {
                                     "name": "xh2",
-                                    "label": "Số tác động xã hội mức 2"
+                                    "label": "Số tác động xã hội mức 2",
+                                    "label_en": "Number of level-2 social impacts"
                                 },
                                 {
                                     "name": "xh1",
-                                    "label": "Số tác động xã hội mức 1"
+                                    "label": "Số tác động xã hội mức 1",
+                                    "label_en": "Number of level-1 social impacts"
                                 },
                                 {
                                     "name": "mt3",
-                                    "label": "Số tác động môi trường mức 3"
+                                    "label": "Số tác động môi trường mức 3",
+                                    "label_en": "Number of level-3 environmental impacts"
                                 },
                                 {
                                     "name": "mt2",
-                                    "label": "Số tác động môi trường mức 2"
+                                    "label": "Số tác động môi trường mức 2",
+                                    "label_en": "Number of level-2 environmental impacts"
                                 },
                                 {
                                     "name": "mt1",
-                                    "label": "Số tác động môi trường mức 1"
+                                    "label": "Số tác động môi trường mức 1",
+                                    "label_en": "Number of level-1 environmental impacts"
                                 }
                             ]
                         },
                         {
                             "id": "policy_behavior_change",
                             "text": "Có tác động thay đổi nhận thức/thái độ/hành vi xã hội không?",
+                            "text_en": "Is there an impact changing social awareness/attitude/behavior?",
                             "max": 10,
                             "scoring": {
                                 "type": "policy_behavior_change"
@@ -1371,13 +1578,15 @@
                             "inputs": [
                                 {
                                     "name": "level",
-                                    "label": "Mức tác động: nhập 1, 2 hoặc 3"
+                                    "label": "Mức tác động: nhập 1, 2 hoặc 3",
+                                    "label_en": "Impact level: enter 1, 2, or 3"
                                 }
                             ]
                         },
                         {
                             "id": "policy_diffusion",
                             "text": "Có mức độ lan tỏa chính sách ra địa phương/ngành không?",
+                            "text_en": "What is the level of policy diffusion to localities/sectors?",
                             "max": 5,
                             "scoring": {
                                 "type": "policy_diffusion"
@@ -1386,19 +1595,23 @@
                             "inputs": [
                                 {
                                     "name": "level",
-                                    "label": "Mức lan tỏa: nhập 1 hoặc 2"
+                                    "label": "Mức lan tỏa: nhập 1 hoặc 2",
+                                    "label_en": "Diffusion level: enter 1 or 2"
                                 },
                                 {
                                     "name": "ministry_reports",
-                                    "label": "Số báo cáo cấp Bộ/ngành"
+                                    "label": "Số báo cáo cấp Bộ/ngành",
+                                    "label_en": "Number of ministry/sector-level reports"
                                 },
                                 {
                                     "name": "local_reports",
-                                    "label": "Số báo cáo cấp địa phương"
+                                    "label": "Số báo cáo cấp địa phương",
+                                    "label_en": "Number of local-level reports"
                                 },
                                 {
                                     "name": "adoption_rate",
-                                    "label": "Tỷ lệ khuyến nghị được áp dụng (%)"
+                                    "label": "Tỷ lệ khuyến nghị được áp dụng (%)",
+                                    "label_en": "Recommendation adoption rate (%)"
                                 }
                             ]
                         }

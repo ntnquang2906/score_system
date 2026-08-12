@@ -3,6 +3,9 @@ session_start();
 
 require_once 'logger.php';
 require_once 'credentials.php';
+require_once 'lang.php';
+
+initLang();
 
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
     writeLog("ADMIN_LOGIN_REDIRECT", "Tài khoản đã đăng nhập, chuyển hướng về dashboard", [
@@ -40,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: dashboard.php");
         exit();
     } else {
-        $error = "Tài khoản hoặc mật khẩu không chính xác!";
+        $error = t('login.error_wrong_credentials');
 
         writeLog("ADMIN_LOGIN_FAIL", "Đăng nhập quản trị thất bại", [
             "username" => $username,
@@ -50,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="<?php echo $LANG; ?>">
 
 <head>
     <meta charset="UTF-8">
@@ -59,8 +62,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-180.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Đăng nhập - Hệ thống đánh giá KH&CN</title>
+    <title><?php echo t('login.title'); ?></title>
+    <link rel="stylesheet" href="i18n.css">
     <style>
+        .lang-switch {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
@@ -70,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
         }
 
         .login-container {
@@ -86,6 +98,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #333;
             margin-bottom: 30px;
             font-size: 24px;
+        }
+
+        .back-to-form-link {
+            display: inline-block;
+            margin-bottom: 16px;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .back-to-form-link:hover {
+            text-decoration: underline;
         }
 
         .login-container p {
@@ -152,30 +177,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 
 <body>
+    <?php echo langSwitchLinks(); ?>
+
     <div class="login-container">
-        <h1>🔐 Đăng nhập</h1>
-        <p>Hệ thống quản lý kết quả đánh giá KH&CN</p>
+        <a href="index.php" class="back-to-form-link"><?php echo t('login.back_to_form'); ?></a>
+        <h1><?php echo t('login.h1'); ?></h1>
+        <p><?php echo t('login.subtitle'); ?></p>
 
         <?php if (!empty($error)): ?>
             <div class="error-message"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
         <div class="info-box">
-            ℹ️ Chỉ dành cho lãnh đạo/quản trị viên. Vui lòng nhập tài khoản và mật khẩu.
+            <?php echo t('login.info_box'); ?>
         </div>
 
         <form method="POST">
             <div class="form-group">
-                <label for="username">Tên tài khoản:</label>
+                <label for="username"><?php echo t('login.username_label'); ?></label>
                 <input type="text" id="username" name="username" required autofocus>
             </div>
 
             <div class="form-group">
-                <label for="password">Mật khẩu:</label>
+                <label for="password"><?php echo t('login.password_label'); ?></label>
                 <input type="password" id="password" name="password" required>
             </div>
 
-            <button type="submit" class="login-btn">Đăng nhập</button>
+            <button type="submit" class="login-btn"><?php echo t('login.submit_btn'); ?></button>
         </form>
     </div>
     <script src="pwa-register.js"></script>
