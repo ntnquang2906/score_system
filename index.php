@@ -1,6 +1,6 @@
 <?php
-require_once 'logger.php';
-require_once 'lang.php';
+require_once 'includes/logger.php';
+require_once 'includes/lang.php';
 
 initLang();
 
@@ -42,6 +42,15 @@ writeLog("PAGE_ACCESS", "Người dùng truy cập form đánh giá", [
             background-color: #764ba2;
         }
 
+        .admin-login-link a {
+            color: white;
+            font-weight: bold;
+        }
+
+        .admin-login-link a:hover {
+            text-decoration: underline;
+        }
+
         body {
             position: relative;
         }
@@ -65,9 +74,9 @@ writeLog("PAGE_ACCESS", "Người dùng truy cập form đánh giá", [
 </head>
 
 <body>
-    <div class="admin-login-link" style="display:flex; gap:10px; align-items:center;">
+    <div class="admin-login-link" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <?php echo langSwitchLinks(true); ?>
-        <a href="login.php"><?php echo t('index.admin_link'); ?></a>
+        <a href="login.php"><?php echo t('index.login_link'); ?></a>
     </div>
 
     <h1><?php echo t('index.h1'); ?></h1>

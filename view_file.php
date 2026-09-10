@@ -1,12 +1,17 @@
 <?php
 session_start();
 
-require_once 'logger.php';
-require_once 'lang.php';
+require_once 'includes/logger.php';
+require_once 'includes/users.php';
+require_once 'includes/lang.php';
+require_once 'includes/tsv.php';
 
 initLang();
 
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+$isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+$isUnit = isset($_SESSION['unit_logged_in']) && $_SESSION['unit_logged_in'] === true;
+
+if (!$isAdmin && !$isUnit) {
     writeLog("ADMIN_BLOCKED_ACCESS", "Truy cập trang xem file bị chặn do chưa đăng nhập", [
         "target" => "view_file.php",
         "file" => $_GET['file'] ?? ""
@@ -16,33 +21,9 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit();
 }
 
-$canEdit = isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'editor';
+$canEdit = $isAdmin && isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'editor';
 
 $resultsDir = "results/";
-
-function removeBom($content)
-{
-    return substr($content, 0, 3) === "\xEF\xBB\xBF" ? substr($content, 3) : $content;
-}
-
-function readTsvFile($filepath)
-{
-    if (!file_exists($filepath) || !is_file($filepath)) {
-        return [];
-    }
-
-    $content = removeBom(file_get_contents($filepath));
-    $lines = explode("\n", $content);
-    $data = [];
-
-    foreach ($lines as $line) {
-        if (trim($line) !== "") {
-            $data[] = explode("\t", $line);
-        }
-    }
-
-    return $data;
-}
 
 $file = $_GET['file'] ?? '';
 $file = basename($file);
@@ -64,6 +45,27 @@ if (strpos(realpath($filepath), realpath($resultsDir)) !== 0) {
     ], "WARN");
 
     die(t('view.access_denied'));
+}
+
+if ($isUnit) {
+    $parsed = parseDetailFilename($file);
+    $ownUnitKey = $_SESSION['unit_key'] ?? '';
+
+    if ($parsed === null || normalizeUnitKey($parsed['unit']) !== $ownUnitKey) {
+        writeLog("UNIT_VIEW_BLOCKED", "Tài khoản đơn vị bị chặn xem file của đơn vị khác", [
+            "username" => $_SESSION['unit_username'] ?? "",
+            "unit_key" => $ownUnitKey,
+            "file" => $file
+        ], "WARN");
+
+        die(t('view.access_denied'));
+    }
+
+    writeLog("UNIT_VIEW_FILE", "Tài khoản đơn vị xem file kết quả của mình", [
+        "username" => $_SESSION['unit_username'] ?? "",
+        "unit_key" => $ownUnitKey,
+        "file" => $file
+    ]);
 }
 
 $content = removeBom(file_get_contents($filepath));
@@ -275,7 +277,7 @@ if (isset($_GET['export']) && $_GET['export'] === '1') {
             <h1>📄 <?php echo htmlspecialchars($file); ?></h1>
             <div style="display:flex; gap:10px; align-items:center;">
                 <?php echo langSwitchLinks(true); ?>
-                <a href="dashboard.php"><?php echo t('view.back_dashboard'); ?></a>
+                <a href="<?php echo $isUnit ? 'unit_dashboard.php' : 'dashboard.php'; ?>"><?php echo t('view.back_dashboard'); ?></a>
             </div>
         </div>
     </div>
@@ -295,6 +297,8 @@ if (isset($_GET['export']) && $_GET['export'] === '1') {
                 📁 <strong><?php echo htmlspecialchars($file); ?></strong>
                 <?php if ($canEdit): ?>
                     <span class="role-note"><?php echo t('view.role_editor'); ?></span>
+                <?php elseif ($isUnit): ?>
+                    <span class="role-note"><?php echo t('view.role_unit'); ?></span>
                 <?php else: ?>
                     <span class="role-note"><?php echo t('view.role_viewer'); ?></span>
                 <?php endif; ?>

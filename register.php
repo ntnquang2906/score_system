@@ -9,11 +9,6 @@ require_once 'includes/lang.php';
 initLang();
 
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
-    writeLog("ADMIN_LOGIN_REDIRECT", "Tài khoản đã đăng nhập, chuyển hướng về dashboard", [
-        "username" => $_SESSION['admin_username'] ?? "",
-        "role" => $_SESSION['admin_role'] ?? ""
-    ]);
-
     header("Location: dashboard.php");
     exit();
 }
@@ -23,59 +18,68 @@ if (isset($_SESSION['unit_logged_in']) && $_SESSION['unit_logged_in'] === true) 
     exit();
 }
 
-writeLog("ADMIN_LOGIN_PAGE_ACCESS", "Truy cập trang đăng nhập");
+writeLog("REGISTER_PAGE_ACCESS", "Truy cập trang đăng ký tài khoản đơn vị");
 
 $error = "";
-$justRegistered = isset($_GET['registered']) && $_GET['registered'] === '1';
+$username = "";
+$organizationName = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
+    $passwordConfirm = $_POST['password_confirm'] ?? '';
+    $organizationName = trim($_POST['organization_name'] ?? '');
 
     $users = loadUsers();
 
-    if (
-        isset($accounts[$username]) &&
-        isset($accounts[$username]['password']) &&
-        $accounts[$username]['password'] === $password
-    ) {
-        $_SESSION['admin_logged_in'] = true;
-        $_SESSION['admin_username'] = $username;
-        $_SESSION['admin_role'] = $accounts[$username]['role'] ?? 'viewer';
-        $_SESSION['login_time'] = time();
-
-        writeLog("ADMIN_LOGIN_SUCCESS", "Đăng nhập quản trị thành công", [
-            "username" => $username,
-            "role" => $_SESSION['admin_role']
-        ]);
-
-        header("Location: dashboard.php");
-        exit();
-    } elseif (
-        isset($users[$username]) &&
-        isset($users[$username]['password_hash']) &&
-        password_verify($password, $users[$username]['password_hash'])
-    ) {
-        $_SESSION['unit_logged_in'] = true;
-        $_SESSION['unit_username'] = $username;
-        $_SESSION['unit_key'] = $users[$username]['unit_key'] ?? '';
-        $_SESSION['unit_display'] = $users[$username]['unit_display'] ?? '';
-        $_SESSION['login_time'] = time();
-
-        writeLog("UNIT_LOGIN_SUCCESS", "Đăng nhập tài khoản đơn vị thành công", [
-            "username" => $username,
-            "unit_key" => $_SESSION['unit_key']
-        ]);
-
-        header("Location: unit_dashboard.php");
-        exit();
+    if ($username === '' || $password === '' || $organizationName === '') {
+        $error = t('register.error_missing_fields');
+    } elseif (strlen($password) < 6) {
+        $error = t('register.error_password_too_short');
+    } elseif ($password !== $passwordConfirm) {
+        $error = t('register.error_password_mismatch');
+    } elseif (usernameTaken($username, $users, $accounts)) {
+        $error = t('register.error_username_taken');
     } else {
-        $error = t('login.error_wrong_credentials');
+        $unitKey = normalizeUnitKey($organizationName);
+        $unitDisplay = cleanUnitDisplayName($organizationName);
 
-        writeLog("ADMIN_LOGIN_FAIL", "Đăng nhập thất bại", [
-            "username" => $username,
-            "reason" => "wrong_username_or_password"
-        ], "WARN");
+        if ($unitKey === '') {
+            $error = t('register.error_invalid_org');
+        } elseif (unitKeyExists($unitKey, $users)) {
+            $error = t('register.error_unit_taken');
+
+            writeLog("REGISTER_BLOCKED", "Đăng ký bị chặn do đơn vị đã có tài khoản", [
+                "username" => $username,
+                "organization_name" => $organizationName,
+                "unit_key" => $unitKey
+            ], "WARN");
+        } else {
+            $users[$username] = [
+                "password_hash" => password_hash($password, PASSWORD_DEFAULT),
+                "unit_display" => $unitDisplay,
+                "unit_key" => $unitKey,
+                "created_at" => date("Y-m-d H:i:s")
+            ];
+
+            if (saveUsers($users)) {
+                writeLog("REGISTER_SUCCESS", "Đăng ký tài khoản đơn vị thành công", [
+                    "username" => $username,
+                    "organization_name" => $organizationName,
+                    "unit_key" => $unitKey
+                ]);
+
+                header("Location: login.php?registered=1");
+                exit();
+            }
+
+            $error = t('register.error_save_failed');
+
+            writeLog("REGISTER_BLOCKED", "Không thể lưu tài khoản đơn vị mới", [
+                "username" => $username,
+                "unit_key" => $unitKey
+            ], "ERROR");
+        }
     }
 }
 ?>
@@ -89,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-180.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title><?php echo t('login.title'); ?></title>
+    <title><?php echo t('register.title'); ?></title>
     <link rel="stylesheet" href="i18n.css">
     <style>
         .lang-switch {
@@ -109,21 +113,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             justify-content: center;
             align-items: center;
             position: relative;
+            padding: 24px 16px;
         }
 
-        .login-container {
+        .register-container {
             background: white;
             padding: 40px;
             border-radius: 10px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
             width: 100%;
-            max-width: 400px;
+            max-width: 440px;
         }
 
-        .login-container h1 {
+        .register-container h1 {
             text-align: center;
             color: #333;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             font-size: 24px;
         }
 
@@ -140,14 +145,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             text-decoration: underline;
         }
 
-        .login-container p {
+        .register-container p.subtitle {
             text-align: center;
             color: #666;
             margin-bottom: 20px;
             font-size: 14px;
         }
 
-        .form-group { margin-bottom: 20px; }
+        .form-group { margin-bottom: 18px; }
 
         .form-group label {
             display: block;
@@ -170,7 +175,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
         }
 
-        .login-btn {
+        .form-group .field-help {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .register-btn {
             width: 100%;
             padding: 12px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -199,32 +211,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-bottom: 20px;
             border: 1px solid #bee5eb;
             font-size: 13px;
+            line-height: 1.5;
         }
 
-        .success-box {
-            background-color: #d4edda;
-            color: #155724;
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            border: 1px solid #c3e6cb;
-            font-size: 13px;
-        }
-
-        .register-link {
+        .login-link {
             display: block;
             text-align: center;
             margin-top: 18px;
             font-size: 13px;
         }
 
-        .register-link a {
+        .login-link a {
             color: #667eea;
             font-weight: bold;
             text-decoration: none;
         }
 
-        .register-link a:hover {
+        .login-link a:hover {
             text-decoration: underline;
         }
     </style>
@@ -233,39 +236,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <?php echo langSwitchLinks(); ?>
 
-    <div class="login-container">
+    <div class="register-container">
         <a href="index.php" class="back-to-form-link"><?php echo t('login.back_to_form'); ?></a>
-        <h1><?php echo t('login.h1'); ?></h1>
-        <p><?php echo t('login.subtitle'); ?></p>
-
-        <?php if ($justRegistered): ?>
-            <div class="success-box"><?php echo t('login.registered_success'); ?></div>
-        <?php endif; ?>
+        <h1><?php echo t('register.h1'); ?></h1>
+        <p class="subtitle"><?php echo t('register.subtitle'); ?></p>
 
         <?php if (!empty($error)): ?>
             <div class="error-message"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
         <div class="info-box">
-            <?php echo t('login.info_box'); ?>
+            <?php echo t('register.info_box'); ?>
         </div>
 
         <form method="POST">
             <div class="form-group">
-                <label for="username"><?php echo t('login.username_label'); ?></label>
-                <input type="text" id="username" name="username" required autofocus>
+                <label for="organization_name"><?php echo t('register.org_label'); ?></label>
+                <input type="text" id="organization_name" name="organization_name" required autofocus
+                    value="<?php echo htmlspecialchars($organizationName); ?>"
+                    placeholder="<?php echo htmlspecialchars(t('register.org_placeholder')); ?>">
+                <small class="field-help"><?php echo t('register.org_help'); ?></small>
             </div>
 
             <div class="form-group">
-                <label for="password"><?php echo t('login.password_label'); ?></label>
-                <input type="password" id="password" name="password" required>
+                <label for="username"><?php echo t('register.username_label'); ?></label>
+                <input type="text" id="username" name="username" required
+                    value="<?php echo htmlspecialchars($username); ?>">
             </div>
 
-            <button type="submit" class="login-btn"><?php echo t('login.submit_btn'); ?></button>
+            <div class="form-group">
+                <label for="password"><?php echo t('register.password_label'); ?></label>
+                <input type="password" id="password" name="password" required minlength="6">
+            </div>
+
+            <div class="form-group">
+                <label for="password_confirm"><?php echo t('register.password_confirm_label'); ?></label>
+                <input type="password" id="password_confirm" name="password_confirm" required minlength="6">
+            </div>
+
+            <button type="submit" class="register-btn"><?php echo t('register.submit_btn'); ?></button>
         </form>
 
-        <div class="register-link">
-            <?php echo t('login.no_unit_account_prefix'); ?> <a href="register.php"><?php echo t('login.register_link'); ?></a>
+        <div class="login-link">
+            <?php echo t('register.has_account_prefix'); ?> <a href="login.php"><?php echo t('register.login_link'); ?></a>
         </div>
     </div>
     <script src="pwa-register.js"></script>

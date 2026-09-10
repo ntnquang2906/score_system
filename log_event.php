@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-require_once 'logger.php';
+require_once 'includes/logger.php';
 
 $raw = file_get_contents("php://input");
 $data = json_decode($raw, true);

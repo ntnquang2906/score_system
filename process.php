@@ -1,6 +1,9 @@
 <?php
-require_once 'logger.php';
-require_once 'lang.php';
+require_once 'includes/logger.php';
+require_once 'includes/lang.php';
+require_once 'includes/vietnamese.php';
+require_once 'includes/tsv.php';
+require_once 'includes/xlsx_writer.php';
 
 initLang();
 
@@ -806,34 +809,6 @@ function calculateQuestionScore($q, $answer)
     }
 }
 
-function normalizeVietnameseKeepCase($text)
-{
-    $map = [
-        'à'=>'a','á'=>'a','ạ'=>'a','ả'=>'a','ã'=>'a','â'=>'a','ầ'=>'a','ấ'=>'a','ậ'=>'a','ẩ'=>'a','ẫ'=>'a','ă'=>'a','ằ'=>'a','ắ'=>'a','ặ'=>'a','ẳ'=>'a','ẵ'=>'a',
-        'è'=>'e','é'=>'e','ẹ'=>'e','ẻ'=>'e','ẽ'=>'e','ê'=>'e','ề'=>'e','ế'=>'e','ệ'=>'e','ể'=>'e','ễ'=>'e',
-        'ì'=>'i','í'=>'i','ị'=>'i','ỉ'=>'i','ĩ'=>'i',
-        'ò'=>'o','ó'=>'o','ọ'=>'o','ỏ'=>'o','õ'=>'o','ô'=>'o','ồ'=>'o','ố'=>'o','ộ'=>'o','ổ'=>'o','ỗ'=>'o','ơ'=>'o','ờ'=>'o','ớ'=>'o','ợ'=>'o','ở'=>'o','ỡ'=>'o',
-        'ù'=>'u','ú'=>'u','ụ'=>'u','ủ'=>'u','ũ'=>'u','ư'=>'u','ừ'=>'u','ứ'=>'u','ự'=>'u','ử'=>'u','ữ'=>'u',
-        'ỳ'=>'y','ý'=>'y','ỵ'=>'y','ỷ'=>'y','ỹ'=>'y','đ'=>'d',
-
-        'À'=>'A','Á'=>'A','Ạ'=>'A','Ả'=>'A','Ã'=>'A','Â'=>'A','Ầ'=>'A','Ấ'=>'A','Ậ'=>'A','Ẩ'=>'A','Ẫ'=>'A','Ă'=>'A','Ằ'=>'A','Ắ'=>'A','Ặ'=>'A','Ẳ'=>'A','Ẵ'=>'A',
-        'È'=>'E','É'=>'E','Ẹ'=>'E','Ẻ'=>'E','Ẽ'=>'E','Ê'=>'E','Ề'=>'E','Ế'=>'E','Ệ'=>'E','Ể'=>'E','Ễ'=>'E',
-        'Ì'=>'I','Í'=>'I','Ị'=>'I','Ỉ'=>'I','Ĩ'=>'I',
-        'Ò'=>'O','Ó'=>'O','Ọ'=>'O','Ỏ'=>'O','Õ'=>'O','Ô'=>'O','Ồ'=>'O','Ố'=>'O','Ộ'=>'O','Ổ'=>'O','Ỗ'=>'O','Ơ'=>'O','Ờ'=>'O','Ớ'=>'O','Ợ'=>'O','Ở'=>'O','Ỡ'=>'O',
-        'Ù'=>'U','Ú'=>'U','Ụ'=>'U','Ủ'=>'U','Ũ'=>'U','Ư'=>'U','Ừ'=>'U','Ứ'=>'U','Ự'=>'U','Ử'=>'U','Ữ'=>'U',
-        'Ỳ'=>'Y','Ý'=>'Y','Ỵ'=>'Y','Ỷ'=>'Y','Ỹ'=>'Y','Đ'=>'D'
-    ];
-
-    $text = trim($text);
-    $text = strtr($text, $map);
-    $text = preg_replace('/[\/\\\\:\*\?"<>\|]+/u', '_', $text);
-    $text = preg_replace('/[\s\-,;]+/u', '_', $text);
-    $text = preg_replace('/[^A-Za-z0-9_.]+/u', '_', $text);
-    $text = preg_replace('/_+/u', '_', $text);
-
-    return trim($text, '._');
-}
-
 function hasUploadedEvidence($funcKey, $questionId)
 {
     $key = "evidence_" . $funcKey . "_" . $questionId;
@@ -978,22 +953,16 @@ function saveToExcel($organization, $results, $totalE, $rank)
     }
 
     $downloadFile = "results/" . $timestamp . "_" . $orgSafe . ".tsv";
-    $fpDownload = fopen($downloadFile, "w");
 
-    if (!$fpDownload) {
-        writeLog("SYSTEM_RESULT_FILE_CREATE_ERROR", "Không thể tạo file kết quả", [
-            "file" => $downloadFile
-        ], "ERROR");
-
-        return ["error" => t('process.result_file_failed')];
-    }
-
-    fwrite($fpDownload, "\xEF\xBB\xBF");
-    fwrite($fpDownload, "Thời gian\tTổ chức\tChức năng\tTrọng số\tĐt1\tĐt2\tĐt3\tĐt4\tĐT\tĐiểm quy đổi\tTổng E\tXếp loại\tNhóm\tCâu hỏi\tCó/Không\tĐiểm câu hỏi\tChú thích\tMinh chứng\tGiải thích\n");
+    $rows = [[
+        "Thời gian", "Tổ chức", "Chức năng", "Trọng số", "Đt1", "Đt2", "Đt3", "Đt4",
+        "ĐT", "Điểm quy đổi", "Tổng E", "Xếp loại", "Nhóm", "Câu hỏi", "Có/Không",
+        "Điểm câu hỏi", "Chú thích", "Minh chứng", "Giải thích"
+    ]];
 
     foreach ($results as $r) {
         foreach ($r['details'] as $d) {
-            $row = [
+            $rows[] = [
                 $time,
                 $organization,
                 $r['name'],
@@ -1010,21 +979,44 @@ function saveToExcel($organization, $results, $totalE, $rank)
                 $d['question'],
                 $d['yes'] === "1" ? "Có" : "Không",
                 $d['score'],
-                str_replace(["\t", "\n", "\r"], " ", $d['note']),
-                str_replace(["\t", "\n", "\r"], " ", $d['evidence']),
-                str_replace(["\t", "\n", "\r"], " ", $d['explanation'])
+                $d['note'],
+                $d['evidence'],
+                $d['explanation']
             ];
-
-            fwrite($fpDownload, implode("\t", $row) . "\n");
         }
     }
 
-    fclose($fpDownload);
+    if (!writeTsvFile($downloadFile, $rows)) {
+        writeLog("SYSTEM_RESULT_FILE_CREATE_ERROR", "Không thể tạo file kết quả", [
+            "file" => $downloadFile
+        ], "ERROR");
+
+        return ["error" => t('process.result_file_failed')];
+    }
 
     writeLog("SYSTEM_RESULT_FILE_CREATED", "Đã tạo file kết quả chi tiết", [
         "organization" => $organization,
         "file" => $downloadFile
     ]);
+
+    // File .tsv ở trên vẫn là bản lưu gốc (dashboard/sửa file dùng định dạng
+    // này). Bên cạnh đó tạo thêm file .xlsx thật để người điền tải về mở bằng
+    // Excel không bị lỗi font, vì .xlsx ghi UTF-8 tường minh trong XML, không
+    // phụ thuộc bảng mã hệ thống như .tsv/.csv.
+    $xlsxFile = "results/" . $timestamp . "_" . $orgSafe . ".xlsx";
+
+    if (writeXlsxFile($xlsxFile, "Ket qua danh gia", $rows)) {
+        writeLog("SYSTEM_RESULT_FILE_CREATED", "Đã tạo file kết quả Excel (.xlsx)", [
+            "organization" => $organization,
+            "file" => $xlsxFile
+        ]);
+
+        return ["success" => true, "file" => $xlsxFile];
+    }
+
+    writeLog("SYSTEM_RESULT_FILE_CREATE_ERROR", "Không thể tạo file .xlsx, dùng tạm file .tsv", [
+        "file" => $xlsxFile
+    ], "WARN");
 
     return ["success" => true, "file" => $downloadFile];
 }
@@ -1275,6 +1267,10 @@ if (is_array($saveResult) && isset($saveResult['error'])) {
         "rank" => $rank
     ]);
 }
+
+$rankClass = "rank-" . strtolower(substr($rank, 0, 1));
+$totalPct = max(0, min(100, $totalE));
+$submittedAt = date("d/m/Y H:i:s");
 ?>
 
 <!DOCTYPE html>
@@ -1282,6 +1278,7 @@ if (is_array($saveResult) && isset($saveResult['error'])) {
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo t('process.page_title'); ?></title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -1308,74 +1305,110 @@ if (is_array($saveResult) && isset($saveResult['error'])) {
         </script>
     <?php endif; ?>
 
-    <div class="container">
+    <div class="container report-page">
         <h1><?php echo t('process.h1'); ?></h1>
 
         <?php if ($errorMessage): ?>
-            <div class="error-message" style="background-color: #f8d7da; color: #721c24; padding: 15px; border: 1px solid #f5c6cb; border-radius: 4px; margin-bottom: 20px;">
-                <strong><?php echo t('process.error_label'); ?></strong> <?= htmlspecialchars($errorMessage) ?>
-                <p style="margin-top: 10px; font-size: 0.9em;"><?php echo t('process.error_contact_admin'); ?></p>
+            <div class="report-banner report-banner-error">
+                <span class="report-banner-icon">⚠️</span>
+                <div>
+                    <strong><?php echo t('process.error_label'); ?></strong> <?= htmlspecialchars($errorMessage) ?>
+                    <p class="report-banner-sub"><?php echo t('process.error_contact_admin'); ?></p>
+                </div>
             </div>
         <?php else: ?>
-            <div class="success-message" style="background-color: #d4edda; color: #155724; padding: 15px; border: 1px solid #c3e6cb; border-radius: 4px; margin-bottom: 20px;">
-                <strong><?php echo t('process.success_label'); ?></strong> <?php echo t('process.success_message'); ?>
-                <?php if ($downloadFile): ?>
-                    <p style="margin-top: 10px;">
-                        <a href="<?= htmlspecialchars($downloadFile) ?>" download style="display: inline-block; margin-top: 10px; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                            <?php echo t('process.download_result'); ?>
-                        </a>
-                    </p>
-                <?php endif; ?>
+            <div class="report-banner report-banner-success">
+                <span class="report-banner-icon">✅</span>
+                <div>
+                    <strong><?php echo t('process.success_label'); ?></strong> <?php echo t('process.success_message'); ?>
+                </div>
+            </div>
+
+            <div class="report-hero">
+                <div class="report-hero-top">
+                    <div>
+                        <div class="report-org"><?php echo t('process.evaluator_prefix'); ?><?= htmlspecialchars($organization) ?></div>
+                        <div class="report-meta"><?= htmlspecialchars($submittedAt) ?></div>
+                    </div>
+                    <span class="rank-badge <?= $rankClass ?>">🏅 <?php echo t('process.rank_label'); ?><?= htmlspecialchars($rankDisplay) ?></span>
+                </div>
+
+                <div class="report-score-block">
+                    <div class="report-score-value"><?= round($totalE, 2) ?><span class="report-score-max">/100</span></div>
+                    <div class="report-score-label"><?php echo t('process.total_score_heading'); ?></div>
+                    <div class="report-progress">
+                        <div class="report-progress-fill <?= $rankClass ?>" style="width: <?= $totalPct ?>%"></div>
+                    </div>
+                </div>
             </div>
         <?php endif; ?>
 
-        <h2><?php echo t('process.evaluator_prefix'); ?><?= htmlspecialchars($organization) ?></h2>
+        <?php if (!$errorMessage): ?>
+            <h2 class="report-section-title"><?php echo t('process.details_heading'); ?></h2>
 
-        <?php foreach ($results as $funcKey => $r): ?>
-            <div class="function-card">
-                <h2><?= htmlspecialchars(pickField($criteria['functions'][$funcKey], 'name')) ?></h2>
+            <?php foreach ($results as $funcKey => $r): ?>
+                <div class="function-card">
+                    <div class="function-card-header">
+                        <h2><?= htmlspecialchars(pickField($criteria['functions'][$funcKey], 'name')) ?></h2>
+                        <span class="weight-pill"><?php echo t('process.weight_label'); ?><?= $r['weight'] * 100 ?>%</span>
+                    </div>
 
-                <p><?php echo t('process.weight_label'); ?><?= $r['weight'] * 100 ?>%</p>
-                <p><?php echo t('process.dt1_label'); ?><?= round($r['dt1'], 2) ?></p>
-                <p><?php echo t('process.dt2_label'); ?><?= round($r['dt2'], 2) ?></p>
-                <p><?php echo t('process.dt3_label'); ?><?= round($r['dt3'], 2) ?></p>
-                <p><?php echo t('process.dt4_label'); ?><?= round($r['dt4'], 2) ?></p>
-
-                <h3><?php echo t('process.dt_label'); ?><?= round($r['dt'], 2) ?></h3>
-                <h3><?php echo t('process.weighted_label'); ?><?= round($r['weighted'], 2) ?></h3>
-
-                <details class="explain-details">
-                    <summary><?php echo t('process.details_summary'); ?></summary>
-                    <?php $lastGroupId = null; ?>
-                    <?php foreach ($r['details'] as $d): ?>
-                        <?php if ($d['group'] !== $lastGroupId): ?>
-                            <?php $lastGroupId = $d['group']; ?>
-                            <?php $groupInfo = findGroup($criteria['functions'][$funcKey], $lastGroupId); ?>
-                            <h4 class="explain-group-title"><?= $groupInfo ? htmlspecialchars(pickField($groupInfo, 'title')) : htmlspecialchars($lastGroupId) ?></h4>
-                        <?php endif; ?>
-                        <div class="explain-item">
-                            <p class="explain-question"><?= htmlspecialchars($LANG === 'en' ? $d['question_en'] : $d['question']) ?></p>
-                            <p class="explain-meta">
-                                <?php echo t('process.answer_label'); ?><?= $d['yes'] === '1' ? t('js.yes') : t('js.no') ?>
-                                &nbsp;|&nbsp;
-                                <?php echo t('process.score_label'); ?><strong><?= numFmt($d['score']) ?>/<?= numFmt($d['max']) ?></strong>
-                            </p>
-                            <p class="explain-text"><?= htmlspecialchars($LANG === 'en' ? $d['explanation_en'] : $d['explanation']) ?></p>
+                    <div class="score-chips">
+                        <div class="score-chip">
+                            <span class="chip-label"><?php echo t('process.dt1_label'); ?></span>
+                            <span class="chip-value"><?= round($r['dt1'], 2) ?></span>
                         </div>
-                    <?php endforeach; ?>
-                </details>
-            </div>
-        <?php endforeach; ?>
+                        <div class="score-chip">
+                            <span class="chip-label"><?php echo t('process.dt2_label'); ?></span>
+                            <span class="chip-value"><?= round($r['dt2'], 2) ?></span>
+                        </div>
+                        <div class="score-chip">
+                            <span class="chip-label"><?php echo t('process.dt3_label'); ?></span>
+                            <span class="chip-value"><?= round($r['dt3'], 2) ?></span>
+                        </div>
+                        <div class="score-chip">
+                            <span class="chip-label"><?php echo t('process.dt4_label'); ?></span>
+                            <span class="chip-value"><?= round($r['dt4'], 2) ?></span>
+                        </div>
+                        <div class="score-chip total">
+                            <span class="chip-label"><?php echo t('process.dt_label'); ?></span>
+                            <span class="chip-value"><?= round($r['dt'], 2) ?></span>
+                        </div>
+                        <div class="score-chip weighted">
+                            <span class="chip-label"><?php echo t('process.weighted_label'); ?></span>
+                            <span class="chip-value"><?= round($r['weighted'], 2) ?></span>
+                        </div>
+                    </div>
 
-        <hr>
+                    <details class="explain-details">
+                        <summary><?php echo t('process.details_summary'); ?></summary>
+                        <?php $lastGroupId = null; ?>
+                        <?php foreach ($r['details'] as $d): ?>
+                            <?php if ($d['group'] !== $lastGroupId): ?>
+                                <?php $lastGroupId = $d['group']; ?>
+                                <?php $groupInfo = findGroup($criteria['functions'][$funcKey], $lastGroupId); ?>
+                                <h4 class="explain-group-title"><?= $groupInfo ? htmlspecialchars(pickField($groupInfo, 'title')) : htmlspecialchars($lastGroupId) ?></h4>
+                            <?php endif; ?>
+                            <div class="explain-item <?= $d['yes'] === '1' ? 'answer-yes' : 'answer-no' ?>">
+                                <span class="explain-score-badge"><?= numFmt($d['score']) ?>/<?= numFmt($d['max']) ?></span>
+                                <p class="explain-question"><?= htmlspecialchars($LANG === 'en' ? $d['question_en'] : $d['question']) ?></p>
+                                <p class="explain-meta">
+                                    <span class="answer-pill <?= $d['yes'] === '1' ? 'yes' : 'no' ?>"><?= $d['yes'] === '1' ? t('js.yes') : t('js.no') ?></span>
+                                </p>
+                                <p class="explain-text"><?= htmlspecialchars($LANG === 'en' ? $d['explanation_en'] : $d['explanation']) ?></p>
+                            </div>
+                        <?php endforeach; ?>
+                    </details>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
 
-        <h2><?php echo t('process.total_e_label'); ?><?= round($totalE, 2) ?></h2>
-        <h2><?php echo t('process.rank_label'); ?><?= htmlspecialchars($rankDisplay) ?></h2>
-
-        <div style="margin-top: 30px; text-align: center;">
-            <a href="index.php" style="display: inline-block; padding: 10px 20px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                <?php echo t('process.back_link'); ?>
-            </a>
+        <div class="report-actions">
+            <?php if ($downloadFile): ?>
+                <a href="<?= htmlspecialchars($downloadFile) ?>" download class="btn-download"><?php echo t('process.download_result'); ?></a>
+                <a href="#" onclick="window.print(); return false;" class="btn-print"><?php echo t('process.print_btn'); ?></a>
+            <?php endif; ?>
+            <a href="index.php" class="btn-back"><?php echo t('process.back_link'); ?></a>
         </div>
     </div>
 </body>

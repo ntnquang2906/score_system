@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 function ensureLogDir()
 {
-    $logDir = __DIR__ . "/logs";
+    $logDir = dirname(__DIR__) . "/logs";
 
     if (!is_dir($logDir)) {
         mkdir($logDir, 0775, true);
@@ -75,6 +75,15 @@ function shouldWriteLog($type)
         "ADMIN_LOGIN_FAILED",
         "ADMIN_LOGOUT",
 
+        // Unit account (self-registered)
+        "REGISTER_PAGE_ACCESS",
+        "REGISTER_SUCCESS",
+        "REGISTER_BLOCKED",
+        "UNIT_LOGIN_SUCCESS",
+        "UNIT_DASHBOARD_ACCESS",
+        "UNIT_VIEW_FILE",
+        "UNIT_VIEW_BLOCKED",
+
         // Dashboard / view
         "ADMIN_DASHBOARD_ACCESS",
         "ADMIN_DASHBOARD_RENDER",
@@ -119,8 +128,8 @@ function writeLog($type, $message = "", $context = [], $level = "INFO")
         "level"      => $level,
         "type"       => $type,
         "message"    => $message,
-        "user"       => $_SESSION['admin_username'] ?? "guest",
-        "role"       => $_SESSION['admin_role'] ?? "guest",
+        "user"       => $_SESSION['admin_username'] ?? $_SESSION['unit_username'] ?? "guest",
+        "role"       => $_SESSION['admin_role'] ?? (($_SESSION['unit_logged_in'] ?? false) ? "unit" : "guest"),
         "ip"         => getClientIp(),
         "method"     => $_SERVER['REQUEST_METHOD'] ?? "",
         "uri"        => $_SERVER['REQUEST_URI'] ?? "",
