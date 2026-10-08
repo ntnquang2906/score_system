@@ -1,0 +1,109 @@
+# Stack dev/staging. Chạy: docker compose up -d --build
+x-php: &php
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+    args:
+      UID: ${UID:-1000}
+      GID: ${GID:-1000}
+  image: score-php:dev
+  env_file: backend/.env
+  volumes:
+    - ./backend:/var/www/backend
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_started }
+  restart: unless-stopped
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "${NGINX_PORT:-6868}:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./backend:/var/www/backend:ro
+      - ./frontend/dist:/var/www/frontend:ro
+    depends_on: [app, keycloak]
+    restart: unless-stopped
+
+  app:
+    <<: *php
+
+  queue:
+    <<: *php
+    command: php artisan queue:work --tries=3 --max-time=3600
+
+  scheduler:
+    <<: *php
+    command: php artisan schedule:work
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: score
+      POSTGRES_USER: score
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-score}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5442}:5432"   # chỉ mở cho máy local (DBeaver/psql)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U score -d score"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+
+  # Kho file tương thích S3 (file minh chứng, file xuất Excel).
+  # Production có thể thay bằng S3 của nhà cung cấp cloud trong nước, chỉ đổi biến AWS_* trong backend/.env
+  seaweedfs:
+    image: chrislusf/seaweedfs:3.97
+    command: server -dir=/data -s3 -s3.config=/etc/seaweedfs/s3.json -volume.max=0
+    volumes:
+      - s3data:/data
+      - ./docker/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+    restart: unless-stopped
+
+  s3-init:   # tạo bucket 1 lần rồi thoát
+    image: chrislusf/seaweedfs:3.97
+    depends_on: [seaweedfs]
+    entrypoint: >
+      /bin/sh -c "
+      until echo 's3.bucket.list' | weed shell -master=seaweedfs:9333 >/dev/null 2>&1; do sleep 2; done;
+      echo 's3.bucket.create -name score-files' | weed shell -master=seaweedfs:9333 || true
+      "
+    restart: "no"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: score
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-score}
+      KC_HTTP_RELATIVE_PATH: /auth
+      # URL công khai cố định => claim "iss" trong token luôn giống nhau
+      KC_HOSTNAME: ${PUBLIC_URL:-http://192.168.88.13:6868}/auth
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"   # backend gọi nội bộ http://keycloak:8080
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: "true"
+    volumes:
+      - ./docker/keycloak:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  s3data:

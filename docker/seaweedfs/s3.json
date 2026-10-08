@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "score-app",
+      "credentials": [{ "accessKey": "score", "secretKey": "score-secret-dev" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

@@ -4,10 +4,14 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+# dữ liệu runtime của hệ cũ (legacy/)
 results/
 uploads/
 logs/
 data/
+
+# frontend
+frontend/node_modules/
 
 # mobile-app (Capacitor/Android)
 mobile-app/android/build/
