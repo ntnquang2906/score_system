@@ -12,3 +12,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE score IN SCHEMA public
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO score_app;
 ALTER DEFAULT PRIVILEGES FOR ROLE score IN SCHEMA public
     GRANT USAGE, SELECT ON SEQUENCES TO score_app;
+
+-- DB riêng cho test tự động (php artisan test)
+\connect postgres
+CREATE DATABASE score_test OWNER score;

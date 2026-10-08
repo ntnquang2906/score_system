@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\UnitName;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -34,5 +35,17 @@ class User extends Authenticatable
     public function hasAnyRole(string ...$roles): bool
     {
         return count(array_intersect($roles, $this->roles ?? [])) > 0;
+    }
+
+    /** Được xem toàn bộ bài đánh giá của tenant (lãnh đạo/quản trị). */
+    public function canSeeAllEvaluations(): bool
+    {
+        return $this->hasAnyRole('admin', 'editor', 'viewer');
+    }
+
+    /** Khoá đơn vị của tài khoản đơn vị (null nếu không phải tài khoản đơn vị). */
+    public function unitKey(): ?string
+    {
+        return $this->hasAnyRole('unit') && $this->unit_name ? UnitName::key($this->unit_name) : null;
     }
 }

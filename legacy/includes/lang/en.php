@@ -167,6 +167,8 @@ return [
     'unit_dashboard.empty_message' => 'Your organization has not submitted any results yet.',
 
     // shared with script.js (index.php's dynamic form)
+    'js.warning_title' => '⚠️ Warning',
+    'js.cancel' => 'Cancel',
     'js.weight_label' => 'Weight (%)',
     'js.points' => 'points',
     'js.group_label' => 'Group: ',

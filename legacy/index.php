@@ -21,7 +21,7 @@ writeLog("PAGE_ACCESS", "Người dùng truy cập form đánh giá", [
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Đánh giá KH&CN">
     <title>Hệ thống đánh giá KH&CN</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=9">
     <link rel="stylesheet" href="i18n.css">
     <style>
         .admin-login-link {
@@ -123,7 +123,7 @@ writeLog("PAGE_ACCESS", "Người dùng truy cập form đánh giá", [
             echo json_encode($jsTranslations, JSON_UNESCAPED_UNICODE);
         ?>;
     </script>
-    <script src="script.js?v=8"></script>
+    <script src="script.js?v=9"></script>
     <script src="pwa-register.js"></script>
 </body>
 

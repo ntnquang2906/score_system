@@ -15,7 +15,7 @@ Nền tảng đánh giá, chấm điểm tổ chức khoa học & công nghệ v
                        │                + queue + scheduler      ├─► Redis (cache, queue)
                        │                                         └─► SeaweedFS (S3: file minh chứng)
                        ├─ /auth/* ─► Keycloak 26 ──► VNU-SSO / SSO các đơn vị
-                       └─ /app/   ─► frontend (SPA)
+                       └─ /       ─► frontend (SPA)
 ```
 
 | Thư mục | Nội dung |
@@ -61,12 +61,16 @@ docker compose exec app php artisan migrate --database=pgsql_owner --seed
 
 | Địa chỉ | |
 |---|---|
-| http://192.168.88.13:6868/app/ | Web |
+| http://192.168.88.13:6868/ | Web (link cũ như `/index.php`, `/dashboard.php` tự chuyển sang trang mới) |
 | http://192.168.88.13:6868/api/v1/health | Health check |
 | http://192.168.88.13:6868/auth/admin | Quản trị Keycloak (`admin` / `KEYCLOAK_ADMIN_PASSWORD`) |
 | `127.0.0.1:5442` | PostgreSQL (DBeaver/psql, user `score`) |
 
-Tài khoản test trong realm `score` (mật khẩu `Dev@12345`): `admin`, `editor`, `viewer`, `unit.uet`, `gv.test`.
+Tài khoản trong realm `score`:
+- Tài khoản cố định chuyển từ hệ cũ (`admin`, `Tuttt`, `Sonpb`, `Dungtt`), dùng **mật khẩu như hệ cũ**, vai trò `editor`.
+- Tài khoản thử (mật khẩu `Dev@12345`): `editor`, `viewer`, `unit.uet`, `gv.test`. Xoá trước khi dùng thật.
+
+Mọi lần sửa bài được ghi vào bảng `audit_logs` (ai sửa, lúc nào, giá trị trước/sau).
 
 Lấy token để thử API (client `score-dev-cli` chỉ dùng cho dev, **phải tắt ở production**):
 
@@ -75,6 +79,56 @@ TOKEN=$(curl -s -X POST http://192.168.88.13:6868/auth/realms/score/protocol/ope
   -d grant_type=password -d client_id=score-dev-cli -d username=gv.test -d 'password=Dev@12345' | jq -r .access_token)
 curl -H "Authorization: Bearer $TOKEN" http://192.168.88.13:6868/api/v1/me
 ```
+
+## API
+
+Tất cả endpoint (trừ `health`) yêu cầu `Authorization: Bearer <access token>`.
+
+| Method | Đường dẫn | Quyền | Mô tả |
+|---|---|---|---|
+| GET | `/api/v1/health` | công khai | Kiểm tra hệ thống |
+| GET | `/api/v1/me` | đã đăng nhập | Thông tin người dùng, vai trò, đơn vị |
+| GET | `/api/v1/criteria/active` | đã đăng nhập | Bộ tiêu chí đang áp dụng (để dựng form) |
+| GET | `/api/v1/criteria/{id}` | đã đăng nhập | 1 phiên bản bộ tiêu chí (form sửa bài) |
+| GET | `/api/v1/evaluations` | admin, editor, viewer, unit | Lãnh đạo: lần nộp cuối của mỗi đơn vị; `?organization_id=` xem lịch sử; lọc `?q=`, `?grade=` |
+| GET | `/api/v1/evaluations/{id}` | như trên | Chi tiết bài: điểm từng câu, giải thích, tệp |
+| POST | `/api/v1/evaluations` | admin, editor, unit | Nộp bài (JSON hoặc multipart kèm tệp) |
+| PUT | `/api/v1/evaluations/{id}` | admin, editor | Sửa bài, chấm lại điểm (bài nhập từ hệ cũ: chỉ đổi tên đơn vị) |
+| GET | `/api/v1/evaluations/{id}/export` | như xem bài | Tải Excel 1 bài |
+| GET | `/api/v1/evaluations/summary` | admin, editor, viewer | Dữ liệu file tổng hợp để xem trên web |
+| GET | `/api/v1/evaluations/summary/export` | admin, editor, viewer | Tải file tổng hợp (Excel) |
+| GET | `/api/v1/attachments/{id}/download` | như xem bài | Tải tệp minh chứng |
+
+Tài khoản đơn vị (`unit`) chỉ xem và nộp bài cho chính đơn vị mình.
+
+### Chấm điểm
+
+- Bộ tiêu chí lưu trong bảng `criteria_versions` (JSON, có phiên bản). Mỗi bài trỏ tới đúng phiên bản đã dùng.
+- Logic chấm điểm nằm ở `backend/app/Domain/Scoring/`, gồm 26 loại tính điểm. Tổng E là tổng điểm quy đổi theo trọng số; xếp loại: A ≥ 80, B ≥ 60, C ≥ 40, D < 40.
+- `tests/Unit/Scoring/LegacyParityTest.php` đối chiếu gần 50.000 trường hợp (gồm mọi giá trị biên) để đảm bảo điểm và lời giải thích không đổi.
+
+## Giao diện web (`frontend/`)
+
+Vue 3 + Vite, chạy ở đường dẫn gốc `/`. Nginx phục vụ thư mục `frontend/dist/`, nên sau khi sửa code phải build lại:
+
+```bash
+cd frontend
+npm install        # lần đầu
+npm run build      # tạo frontend/dist/, tải lại trang là thấy
+npm run dev        # chế độ phát triển: http://localhost:5173/ (tự tải lại khi sửa code)
+```
+
+- Đăng nhập: `src/auth.js` (OIDC + PKCE với Keycloak, chạy được cả HTTP lẫn HTTPS).
+- Gọi API: `src/api.js`. Bản dịch Việt/Anh: `src/locales/`.
+- Trang: `src/views/` gồm form đánh giá, danh sách, kết quả, trang cá nhân.
+
+## Test
+
+```bash
+docker compose exec app php artisan test
+```
+
+Test chạy trên database riêng `score_test`, có chốt chặn nên không bao giờ chạy trên database thật.
 
 ## Vận hành
 

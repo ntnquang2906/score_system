@@ -167,6 +167,8 @@ return [
     'unit_dashboard.empty_message' => 'Đơn vị của bạn chưa nộp kết quả nào.',
 
     // shared with script.js (index.php's dynamic form)
+    'js.warning_title' => '⚠️ Cảnh báo',
+    'js.cancel' => 'Huỷ',
     'js.weight_label' => 'Trọng số (%)',
     'js.points' => 'điểm',
     'js.group_label' => 'Nhóm: ',

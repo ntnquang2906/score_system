@@ -408,7 +408,7 @@ function validateForm() {
             field: "organization_name"
         }, "WARN");
 
-        alert(I18N.alert_missing_org);
+        showWarning(I18N.alert_missing_org);
         if (orgInput) orgInput.focus();
         return false;
     }
@@ -419,7 +419,7 @@ function validateForm() {
 
     if (checkedTypes.length === 0) {
         queueClientLog("FORM_VALIDATE_FAIL", "Chưa chọn chức năng", {}, "WARN");
-        alert(I18N.alert_missing_function);
+        showWarning(I18N.alert_missing_function);
         return false;
     }
 
@@ -435,7 +435,7 @@ function validateForm() {
             weight_sum: weightSum
         }, "WARN");
 
-        alert(I18N.alert_weight_sum);
+        showWarning(I18N.alert_weight_sum);
         return false;
     }
 
@@ -451,7 +451,7 @@ function validateForm() {
                     name: s.name
                 }, "WARN");
 
-                alert(I18N.alert_missing_yes_no);
+                showWarning(I18N.alert_missing_yes_no);
                 s.focus();
                 return false;
             }
@@ -466,7 +466,7 @@ function validateForm() {
                     name: n.name
                 }, "WARN");
 
-                alert(I18N.alert_missing_number);
+                showWarning(I18N.alert_missing_number);
                 n.focus();
                 return false;
             }
@@ -484,7 +484,7 @@ function validateForm() {
                     name: t.name
                 }, "WARN");
 
-                alert(I18N.alert_missing_note);
+                showWarning(I18N.alert_missing_note);
                 t.focus();
                 return false;
             }
@@ -511,7 +511,7 @@ function validateForm() {
                     question_id: row.dataset.questionId
                 }, "WARN");
 
-                alert(I18N.alert_missing_evidence);
+                showWarning(I18N.alert_missing_evidence);
 
                 if (evidenceTextarea) {
                     evidenceTextarea.focus();
@@ -534,17 +534,21 @@ function validateForm() {
 
     const totalMB = totalBytes / 1048576;
 
-    if (totalMB > 50) {
-        const confirmed = confirm(
-            I18N.confirm_large_file.replace("{mb}", totalMB.toFixed(1))
-        );
-
-        if (!confirmed) {
+    if (totalMB > 50 && !window.__largeFileConfirmed) {
+        showConfirm(I18N.confirm_large_file.replace("{mb}", totalMB.toFixed(1)), function () {
+            window.__largeFileConfirmed = true;
+            sendClientLog("FORM_SUBMIT_START", "Người dùng bắt đầu gửi form", {
+                organization_has_value: orgName !== "",
+                selected_functions: checkedTypes,
+                total_file_mb: totalMB.toFixed(1)
+            });
+            document.querySelector("form").submit();
+        }, function () {
             queueClientLog("FORM_SUBMIT_CANCELLED_LARGE_FILE", "Người dùng huỷ nộp do file lớn", {
                 total_mb: totalMB.toFixed(1)
             }, "WARN");
-            return false;
-        }
+        });
+        return false;
     }
     // ────────────────────────────────────────────────────────────────────────
 
@@ -576,6 +580,57 @@ window.addEventListener("beforeunload", function () {
         } catch (e) {}
     }
 });
+
+// ─── Hộp thông báo tự vẽ (thay alert/confirm của trình duyệt có dòng "... says") ───
+function showDialog(message, buttons) {
+    const prevFocus = document.activeElement;
+    const overlay = document.createElement("div");
+    overlay.className = "app-dialog-overlay";
+    overlay.innerHTML =
+        '<div class="app-dialog" role="alertdialog" aria-modal="true">' +
+        '<div class="app-dialog-title">' + (I18N.warning_title || "⚠️ Cảnh báo") + '</div>' +
+        '<div class="app-dialog-body"></div>' +
+        '<div class="app-dialog-actions"></div></div>';
+    overlay.querySelector(".app-dialog-body").textContent = message;
+
+    const close = (cb) => {
+        overlay.remove();
+        document.removeEventListener("keydown", onKey);
+        if (prevFocus && prevFocus.focus) prevFocus.focus();
+        if (cb) cb();
+    };
+    const onKey = (e) => {
+        if (e.key === "Escape") close(buttons[buttons.length - 1].onEsc);
+    };
+
+    buttons.forEach((b) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = b.label;
+        if (b.secondary) btn.className = "secondary";
+        btn.addEventListener("click", () => close(b.onClick));
+        overlay.querySelector(".app-dialog-actions").appendChild(btn);
+    });
+
+    document.body.appendChild(overlay);
+    document.addEventListener("keydown", onKey);
+    // đợi code gọi .focus() vào ô lỗi xong rồi mới chuyển focus sang nút OK (để Enter là đóng)
+    setTimeout(() => {
+        const last = overlay.querySelectorAll("button");
+        last[last.length - 1].focus();
+    }, 0);
+}
+
+function showWarning(message) {
+    showDialog(message, [{ label: "OK" }]);
+}
+
+function showConfirm(message, onOk, onCancel) {
+    showDialog(message, [
+        { label: I18N.cancel || "Huỷ", secondary: true, onClick: onCancel },
+        { label: "OK", onClick: onOk, onEsc: onCancel }
+    ]);
+}
 
 window.clearScoreSystemDraft = clearSavedFormState;
 

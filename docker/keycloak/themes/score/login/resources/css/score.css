@@ -1,0 +1,83 @@
+/* Giao diện đăng nhập ĐHQGHN: ảnh logo VNU làm nền toàn trang.
+   Ảnh: resources/img/vnu-logo.png (đổi ảnh = chép đè file này, tải lại trang là thấy). */
+:root {
+    --vnu-green: #00843d;
+    --vnu-green-dark: #006b31;
+    --vnu-bg: #e9e9e9;          /* trùng màu nền của ảnh logo, hiện khi ảnh chưa tải xong */
+    --keycloak-card-top-color: var(--vnu-green);
+}
+
+html.login-pf body,
+.pf-v5-c-login {
+    background: var(--vnu-bg) url("../img/vnu-logo.png") center / cover no-repeat fixed !important;
+}
+
+/* Logo trên nền đã có tên trường -> ẩn dòng tiêu đề chữ cho đỡ rối */
+#kc-header-wrapper {
+    visibility: hidden;
+    height: 0;
+    padding: 0;
+    margin: 0;
+}
+
+/* Khung đăng nhập: trắng hơi trong để thấy nền, viền trên xanh lá VNU */
+.pf-v5-c-login__main {
+    background: rgba(255, 255, 255, .93) !important;
+    backdrop-filter: blur(3px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .18);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.pf-v5-c-button.pf-m-primary {
+    --pf-v5-c-button--m-primary--BackgroundColor: var(--vnu-green);
+    --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--vnu-green-dark);
+    --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--vnu-green-dark);
+    --pf-v5-c-button--m-primary--active--BackgroundColor: var(--vnu-green-dark);
+}
+
+a, .pf-v5-c-button.pf-m-link {
+    color: var(--vnu-green);
+}
+
+.pf-v5-c-form-control:focus-within {
+    --pf-v5-c-form-control--after--BorderBottomColor: var(--vnu-green);
+}
+
+/* Màn hình rộng: logo bên trái, khung đăng nhập sát phải.
+   Logo tự co theo phần trống bên trái khung -> không bao giờ bị khung che (mọi khổ màn hình/mức zoom). */
+@media (min-width: 1200px) {
+    :root {
+        --card-w: min(31rem, 36vw);                /* bề rộng khung đăng nhập */
+        --card-right: 3vw;                         /* khoảng cách khung tới mép phải */
+        --logo-left: 3vw;                          /* khoảng cách logo tới mép trái */
+        --gap: 3vw;                                /* khoảng trống giữa logo và khung */
+        --logo-w: min(760px, calc(100vw - var(--card-w) - var(--card-right) - var(--logo-left) - var(--gap)));
+    }
+
+    html.login-pf body,
+    .pf-v5-c-login {
+        background: var(--vnu-bg) url("../img/vnu-logo.png") left var(--logo-left) center / var(--logo-w) auto no-repeat fixed !important;
+    }
+
+    /* PatternFly đặt khung trong 1 cột lưới căn giữa -> đẩy cả cột sang phải */
+    .pf-v5-c-login__container {
+        max-width: none !important;
+        width: 100%;
+        justify-content: end !important;
+        grid-template-columns: var(--card-w) !important;
+        padding-right: var(--card-right) !important;
+    }
+}
+
+/* Điện thoại, máy tính bảng: ảnh nằm trọn phía trên, khung đăng nhập bên dưới */
+@media (max-width: 1199px) {
+    html.login-pf body,
+    .pf-v5-c-login {
+        background: var(--vnu-bg) url("../img/vnu-logo.png") center top / min(100%, 900px) auto no-repeat !important;
+    }
+
+    .pf-v5-c-login__container {
+        padding-top: min(62vw, 560px);   /* chừa chỗ cho logo (ảnh tỉ lệ 3:2) */
+    }
+}

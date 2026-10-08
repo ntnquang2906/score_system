@@ -21,24 +21,14 @@ services:
     ports:
       - "${NGINX_PORT:-6868}:80"
     volumes:
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx:/etc/nginx/conf.d:ro
       - ./backend:/var/www/backend:ro
       - ./frontend/dist:/var/www/frontend:ro
-      - ./legacy:/var/www/legacy:ro
-    depends_on: [app, keycloak, legacy]
+    depends_on: [app, keycloak]
     restart: unless-stopped
 
   app:
     <<: *php
-
-  # Giao diện PHP cũ - TẠM THỜI, xoá service này (và legacy/) khi giao diện mới hoàn tất
-  legacy:
-    image: score-php:dev
-    working_dir: /var/www/legacy
-    volumes:
-      - ./legacy:/var/www/legacy
-    depends_on: [app]
-    restart: unless-stopped
 
   queue:
     <<: *php
@@ -86,8 +76,10 @@ services:
     depends_on: [seaweedfs]
     entrypoint: >
       /bin/sh -c "
-      until echo 's3.bucket.list' | weed shell -master=seaweedfs:9333 >/dev/null 2>&1; do sleep 2; done;
-      echo 's3.bucket.create -name score-files' | weed shell -master=seaweedfs:9333 || true
+      until echo 's3.bucket.list' | weed shell -master=seaweedfs:9333 -filer=seaweedfs:8888 2>&1 | grep -qv error; do sleep 2; done;
+      echo 's3.bucket.list' | weed shell -master=seaweedfs:9333 -filer=seaweedfs:8888 | grep -q score-files
+      || echo 's3.bucket.create -name score-files' | weed shell -master=seaweedfs:9333 -filer=seaweedfs:8888;
+      echo 's3.bucket.list' | weed shell -master=seaweedfs:9333 -filer=seaweedfs:8888
       "
     restart: "no"
 
@@ -108,7 +100,8 @@ services:
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: "true"
     volumes:
-      - ./docker/keycloak:/opt/keycloak/data/import:ro
+      - ./docker/keycloak/import:/opt/keycloak/data/import:ro
+      - ./docker/keycloak/themes/score:/opt/keycloak/themes/score:ro   # giao diện đăng nhập riêng
     depends_on:
       postgres: { condition: service_healthy }
     restart: unless-stopped
