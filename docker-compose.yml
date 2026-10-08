@@ -24,11 +24,21 @@ services:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./backend:/var/www/backend:ro
       - ./frontend/dist:/var/www/frontend:ro
-    depends_on: [app, keycloak]
+      - ./legacy:/var/www/legacy:ro
+    depends_on: [app, keycloak, legacy]
     restart: unless-stopped
 
   app:
     <<: *php
+
+  # Giao diện PHP cũ - TẠM THỜI, xoá service này (và legacy/) khi giao diện mới hoàn tất
+  legacy:
+    image: score-php:dev
+    working_dir: /var/www/legacy
+    volumes:
+      - ./legacy:/var/www/legacy
+    depends_on: [app]
+    restart: unless-stopped
 
   queue:
     <<: *php

@@ -15,7 +15,7 @@ Nền tảng đánh giá, chấm điểm tổ chức khoa học & công nghệ v
                        │                + queue + scheduler      ├─► Redis (cache, queue)
                        │                                         └─► SeaweedFS (S3: file minh chứng)
                        ├─ /auth/* ─► Keycloak 26 ──► VNU-SSO / SSO các đơn vị
-                       └─ /       ─► frontend (SPA)
+                       └─ /app/   ─► frontend (SPA)
 ```
 
 | Thư mục | Nội dung |
@@ -61,7 +61,7 @@ docker compose exec app php artisan migrate --database=pgsql_owner --seed
 
 | Địa chỉ | |
 |---|---|
-| http://192.168.88.13:6868/ | Web |
+| http://192.168.88.13:6868/app/ | Web |
 | http://192.168.88.13:6868/api/v1/health | Health check |
 | http://192.168.88.13:6868/auth/admin | Quản trị Keycloak (`admin` / `KEYCLOAK_ADMIN_PASSWORD`) |
 | `127.0.0.1:5442` | PostgreSQL (DBeaver/psql, user `score`) |
