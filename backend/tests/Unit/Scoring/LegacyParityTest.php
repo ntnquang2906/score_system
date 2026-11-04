@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 /**
  * Đảm bảo bộ chấm điểm mới cho kết quả GIỐNG HỆT hệ cũ (legacy/process.php):
  * cùng điểm và cùng câu giải thích cho hàng nghìn bộ số liệu, kể cả giá trị biên.
- * Fixtures sinh bởi tests/Fixtures/scoring/generate_from_legacy.php.
+ * Fixtures (legacy_cases.json.gz) được sinh từ legacy/process.php trước khi bỏ mã PHP cũ.
  */
 class LegacyParityTest extends TestCase
 {

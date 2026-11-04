@@ -94,9 +94,9 @@ services:
       KC_DB_USERNAME: score
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-score}
       KC_HTTP_RELATIVE_PATH: /auth
-      # URL công khai cố định => claim "iss" trong token luôn giống nhau
-      KC_HOSTNAME: ${PUBLIC_URL:-http://192.168.88.13:6868}/auth
-      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"   # backend gọi nội bộ http://keycloak:8080
+      # Không cố định hostname: Keycloak lấy theo link người dùng đang mở (LAN hoặc domain HTTPS).
+      # Mỗi link cho ra 1 issuer riêng -> liệt kê đủ trong OIDC_ISSUER của backend/.env
+      KC_HOSTNAME_STRICT: "false"
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: "true"
     volumes:

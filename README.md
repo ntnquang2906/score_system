@@ -35,6 +35,7 @@ Nền tảng đánh giá, chấm điểm tổ chức khoa học & công nghệ v
 
 ### Đăng nhập
 - Backend chỉ xác thực JWT do Keycloak phát hành (kiểm tra chữ ký JWKS, `iss`, `aud=score-api`), xem `backend/app/Auth/`.
+- Keycloak không cố định hostname: mỗi link truy cập cho ra 1 `iss` riêng. **Thêm link mới** thì cần: (1) thêm vào `OIDC_ISSUER` trong `backend/.env` (cách nhau dấu phẩy) rồi `php artisan config:clear`; (2) thêm `https://<link>/*` vào *Valid redirect URIs* của client `score-web` (Keycloak admin, realm `score`); (3) nếu là link công khai qua HTTP thì cho chuyển sang HTTPS như mynetname trong `docker/nginx/default.conf`.
 - Lần đầu người dùng gọi API, hệ thống tự tạo hồ sơ trong bảng `users`, khớp theo claim `sub`.
 - Vai trò (realm roles): `admin`, `editor`, `viewer`, `unit`, `researcher`. Kiểm tra quyền bằng middleware `role:editor,viewer`.
 - Web và mobile đăng nhập theo luồng Authorization Code + PKCE, dùng client `score-web`.
@@ -49,7 +50,7 @@ Nền tảng đánh giá, chấm điểm tổ chức khoa học & công nghệ v
 Yêu cầu: Docker và Docker Compose. Không cần cài PHP hay Composer trên máy.
 
 ```bash
-cp .env.example .env                 # sửa PUBLIC_URL, UID/GID (id -u, id -g), mật khẩu
+cp .env.example .env                 # sửa UID/GID (id -u, id -g), mật khẩu
 cp backend/.env.example backend/.env
 docker compose up -d --build
 
@@ -61,7 +62,9 @@ docker compose exec app php artisan migrate --database=pgsql_owner --seed
 
 | Địa chỉ | |
 |---|---|
-| http://192.168.88.13:6868/ | Web (link cũ như `/index.php`, `/dashboard.php` tự chuyển sang trang mới) |
+| https://scoring.datasphere.id.vn/ | Web công khai (Cloudflare giữ HTTPS, chuyển vào nginx :6868) |
+| http://192.168.88.13:6868/ | Web trong mạng nội bộ |
+| http://a36a0a125b14.sn.mynetname.net:6868/ | Tự chuyển sang link HTTPS ở trên (Keycloak không cho đăng nhập qua HTTP từ ngoài) |
 | http://192.168.88.13:6868/api/v1/health | Health check |
 | http://192.168.88.13:6868/auth/admin | Quản trị Keycloak (`admin` / `KEYCLOAK_ADMIN_PASSWORD`) |
 | `127.0.0.1:5442` | PostgreSQL (DBeaver/psql, user `score`) |
