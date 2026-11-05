@@ -1,8 +1,8 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { api } from '../api'
-import { lang, t } from '../i18n'
+import { formatTime, lang, num, t } from '../i18n'
 
 const props = defineProps({ id: { type: String, required: true } })
 const route = useRoute()
@@ -33,15 +33,13 @@ const functions = computed(() => {
 const rankClass = computed(() => `rank-${(evaluation.value?.grade || 'd').toLowerCase()}`)
 const totalPct = computed(() => Math.max(0, Math.min(100, Number(evaluation.value?.total_score || 0))))
 
-// Làm tròn 2 chữ số, bỏ số 0 thừa (67.5, 0.19, 85.75)
-const num = (n) => String(Math.round(Number(n) * 100) / 100)
 const printPage = () => window.print()
-const formatTime = (iso) => new Date(iso).toLocaleString(lang.value === 'en' ? 'en-GB' : 'vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
 
 /** Nhóm câu hỏi theo Đt1..Đt4 để hiện tiêu đề nhóm giống trang cũ */
 function groupedDetails(f) {
   const groups = []
   for (const d of f.details || []) {
+    if (onlyAttention.value && !['review', 'fail'].includes(d.evidence?.status)) continue
     if (groups.at(-1)?.id !== d.group) groups.push({ id: d.group, items: [] })
     groups.at(-1).items.push(d)
   }
@@ -59,6 +57,71 @@ async function downloadExcel() {
   }
 }
 const downloadFile = (a) => api.download(`/attachments/${a.id}/download`, a.name)
+
+// ---- Kiểm tra minh chứng tự động
+const EVIDENCE_ICON = { pass: '🟢', review: '🟡', fail: '🔴', pending: '⏳' }
+const onlyAttention = ref(false)   // chỉ hiện tiêu chí cần xem lại / không đạt
+const attentionCount = computed(() => (evaluation.value?.evidence?.review || 0) + (evaluation.value?.evidence?.fail || 0))
+const unreadFiles = computed(() => (evaluation.value?.attachments || []).filter((a) => a.analysis_status !== 'done' && a.analysis_status !== 'pending'))
+const pending = computed(() => (evaluation.value?.evidence?.pending || 0) > 0)
+
+// Tệp đang được đọc: tự tải lại kết quả mỗi 10 giây
+let pollTimer = null
+watch(pending, (on) => {
+  clearInterval(pollTimer)
+  if (on) pollTimer = setInterval(async () => {
+    try { evaluation.value = await api.get(`/evaluations/${props.id}`) } catch { /* thử lại lần sau */ }
+  }, 10000)
+})
+onBeforeUnmount(() => clearInterval(pollTimer))
+
+const factsOf = (d, a) => d.evidence?.files?.find((f) => f.id === a.id)
+/** Dữ kiện hệ thống đọc được từ 1 tệp, gọn 1 dòng */
+function factLine(f) {
+  if (f.status === 'pending') return t('evidence.fact_reading')
+  if (f.status !== 'done') return t('evidence.fact_failed')
+  if (!f.readable) return t('evidence.fact_unreadable')
+  const parts = []
+  if (f.relevant === 'no') parts.push(t('evidence.fact_irrelevant'))
+  if (f.doc_type) parts.push(f.page ? `${f.doc_type} (${t('evidence.page', { n: f.page })})` : f.doc_type)
+  if (f.year) parts.push(t('evidence.fact_year', { y: f.year }))
+  if (f.unit === 'other') parts.push(t('evidence.fact_other_unit', { name: f.other_unit }))
+  if (f.kind === 'xlsx') parts.push(t('evidence.fact_rows', { n: f.count }))
+  else {
+    parts.push(f.stamp ? t('evidence.fact_stamp') : t('evidence.fact_no_stamp'))
+    parts.push(f.signature ? (f.digital_signature ? t('evidence.fact_digital_signature') : t('evidence.fact_signature')) : t('evidence.fact_no_signature'))
+  }
+  if (f.ocr) parts.push(t('evidence.fact_ocr'))
+  return parts.join(' · ')
+}
+
+// Lãnh đạo đặt lại kết luận
+const reviewing = ref(null)   // "chức_năng.mã_câu" đang mở form xem lại
+const reviewVerdict = ref('pass')
+const reviewReason = ref('')
+const reviewError = ref('')
+const saving = ref(false)
+function startReview(key, d) {
+  reviewing.value = key
+  reviewVerdict.value = d.evidence.review?.verdict || 'pass'
+  reviewReason.value = d.evidence.review?.reason || ''
+  reviewError.value = ''
+}
+async function saveReview(key, verdict, reason) {
+  saving.value = true
+  reviewError.value = ''
+  try {
+    evaluation.value = await api.put(`/evaluations/${props.id}/evidence`, { question_key: key, verdict, reason })
+    reviewing.value = null
+  } catch (e) {
+    reviewError.value = Object.values(e.errors).flat()[0] || e.message
+  } finally {
+    saving.value = false
+  }
+}
+async function recheck() {
+  evaluation.value = await api.post(`/evaluations/${props.id}/evidence/recheck`, {})
+}
 </script>
 
 <template>
@@ -97,6 +160,21 @@ const downloadFile = (a) => api.download(`/attachments/${a.id}/download`, a.name
         </div>
       </div>
 
+      <div v-if="evaluation.evidence" class="evidence-summary">
+        <div class="evidence-summary-head">
+          <strong>{{ t('evidence.summary_title') }}</strong>
+          <span v-for="k in ['pass', 'review', 'fail', 'pending']" v-show="k !== 'pending' || pending" :key="k" class="evidence-pill" :class="k">
+            {{ EVIDENCE_ICON[k] }} {{ t(`evidence.${k}`) }}: {{ evaluation.evidence[k] }}
+          </span>
+        </div>
+        <p>{{ t('evidence.summary_help') }}</p>
+        <p v-if="pending">{{ t('evidence.pending_help') }}</p>
+        <div class="evidence-summary-actions">
+          <label v-if="attentionCount"><input v-model="onlyAttention" type="checkbox"> {{ t('evidence.only_attention', { n: attentionCount }) }}</label>
+          <button v-if="evaluation.can_edit && unreadFiles.length" type="button" class="link-btn" @click="recheck">{{ t('evidence.recheck', { n: unreadFiles.length }) }}</button>
+        </div>
+      </div>
+
       <h2 class="report-section-title">{{ t('result.details_heading') }}</h2>
 
       <div v-for="f in functions" :key="f.key" class="function-card">
@@ -120,7 +198,7 @@ const downloadFile = (a) => api.download(`/attachments/${a.id}/download`, a.name
           </div>
         </div>
 
-        <details class="explain-details">
+        <details class="explain-details" :open="onlyAttention || undefined">
           <summary>{{ t('result.details_summary') }}</summary>
           <template v-for="g in groupedDetails(f)" :key="g.id">
             <h4 class="explain-group-title">{{ g.id }}</h4>
@@ -129,11 +207,36 @@ const downloadFile = (a) => api.download(`/attachments/${a.id}/download`, a.name
               <p class="explain-question">{{ lang === 'en' ? d.question_en || d.question : d.question }}</p>
               <p class="explain-meta">
                 <span class="answer-pill" :class="d.yes ? 'yes' : 'no'">{{ d.yes ? t('form.yes') : t('form.no') }}</span>
+                <span v-if="d.evidence" class="evidence-pill" :class="d.evidence.status">
+                  {{ EVIDENCE_ICON[d.evidence.status] }} {{ t(`evidence.${d.evidence.status}`) }}<template v-if="d.evidence.source === 'reviewer'"> · {{ t('evidence.by_reviewer') }}</template>
+                </span>
               </p>
               <p v-if="d.explanation" class="explain-text">{{ lang === 'en' ? d.explanation_en || d.explanation : d.explanation }}</p>
-              <p v-for="a in filesFor(f.key, d.question_id)" :key="a.id" class="explain-meta">
+              <div v-for="a in filesFor(f.key, d.question_id)" :key="a.id" class="explain-meta">
                 <a href="#" @click.prevent="downloadFile(a)">{{ a.name }}</a>
-              </p>
+                <template v-if="factsOf(d, a)">
+                  <div class="evidence-facts">{{ factLine(factsOf(d, a)) }}</div>
+                  <div v-if="factsOf(d, a).quote" class="evidence-quote">“{{ factsOf(d, a).quote }}”</div>
+                </template>
+              </div>
+
+              <div v-if="d.evidence && evaluation.can_edit && d.evidence.status !== 'pending'" class="evidence-review">
+                <template v-if="reviewing === `${f.key}.${d.question_id}`">
+                  <div class="evidence-verdicts">
+                    <label v-for="v in ['pass', 'review', 'fail']" :key="v" class="evidence-pill" :class="[v, { selected: reviewVerdict === v }]">
+                      <input v-model="reviewVerdict" type="radio" :value="v"> {{ EVIDENCE_ICON[v] }} {{ t(`evidence.${v}`) }}
+                    </label>
+                  </div>
+                  <textarea v-model="reviewReason" rows="2" :placeholder="t('evidence.reason_placeholder')" />
+                  <div v-if="reviewError" class="field-error">{{ reviewError }}</div>
+                  <button type="button" :disabled="saving" @click="saveReview(`${f.key}.${d.question_id}`, reviewVerdict, reviewReason)">{{ t('evidence.save') }}</button>
+                  <button type="button" class="link-btn" @click="reviewing = null">{{ t('evidence.cancel') }}</button>
+                </template>
+                <template v-else>
+                  <button type="button" class="link-btn" @click="startReview(`${f.key}.${d.question_id}`, d)">{{ t('evidence.review_btn') }}</button>
+                  <button v-if="d.evidence.source === 'reviewer'" type="button" class="link-btn" :disabled="saving" @click="saveReview(`${f.key}.${d.question_id}`, null)">{{ t('evidence.reset') }}</button>
+                </template>
+              </div>
             </div>
           </template>
         </details>

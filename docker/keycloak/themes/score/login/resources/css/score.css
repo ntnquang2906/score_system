@@ -81,3 +81,15 @@ a, .pf-v5-c-button.pf-m-link {
         padding-top: min(62vw, 560px);   /* chừa chỗ cho logo (ảnh tỉ lệ 3:2) */
     }
 }
+
+/* Hướng dẫn tài khoản tạm (bỏ cùng js/temp-accounts.js khi có SSO) */
+.temp-account-hint {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    line-height: 1.45;
+    margin-bottom: 16px
+}

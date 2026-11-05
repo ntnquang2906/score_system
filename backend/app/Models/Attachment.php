@@ -10,7 +10,15 @@ class Attachment extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['evaluation_id', 'question_key', 'original_name', 'object_key', 'mime_type', 'size'];
+    protected $fillable = [
+        'evaluation_id', 'question_key', 'original_name', 'object_key', 'mime_type', 'size',
+        'analysis_status', 'analysis', 'analyzed_at',
+    ];
+
+    protected function casts(): array
+    {
+        return ['analysis' => 'array', 'analyzed_at' => 'datetime'];
+    }
 
     public function evaluation(): BelongsTo
     {

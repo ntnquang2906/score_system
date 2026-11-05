@@ -2,12 +2,13 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
-import { lang, t } from '../i18n'
-import { canSeeAllEvaluations, isUnitOnly } from '../session'
+import { formatTime, t } from '../i18n'
+import { canSeeAllEvaluations, isUnitOnly, session } from '../session'
 
 const route = useRoute()
 const router = useRouter()
 const unitOnly = isUnitOnly()
+const selfService = unitOnly && !session.user.unit_name   // tài khoản tạm: chỉ thấy bài mình nộp
 
 const data = ref(null)
 const error = ref('')
@@ -46,7 +47,6 @@ const showHistory = (e) => router.push({ query: { organization_id: e.organizatio
 const backToLatest = () => router.push({ query: {} })
 
 const goPage = (p) => router.replace({ query: { ...route.query, page: p } })
-const formatTime = (iso) => new Date(iso).toLocaleString(lang.value === 'en' ? 'en-GB' : 'vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
 const downloadingSummary = ref(false)
 async function downloadSummary() {
   downloadingSummary.value = true
@@ -85,7 +85,7 @@ const download = (e) => api.download(`/evaluations/${e.id}/export`, 'ket_qua.xls
   <div class="section">
     <h2 v-if="route.query.organization_id">{{ t('list.history_heading', { name: historyOrg || '' }) }}</h2>
     <h2 v-else>{{ t('list.files_heading') }}</h2>
-    <div v-if="unitOnly" class="info-box">{{ t('list.info_box_unit') }}</div>
+    <div v-if="unitOnly" class="info-box">{{ selfService ? t('list.info_box_self') : t('list.info_box_unit') }}</div>
     <div v-else-if="route.query.organization_id" class="info-box">
       {{ t('list.info_box_history') }}
       <a href="#" @click.prevent="backToLatest">{{ t('list.back_to_latest') }}</a>
@@ -136,7 +136,14 @@ const download = (e) => api.download(`/evaluations/${e.id}/export`, 'ket_qua.xls
               <div v-if="e.organization.submitted_name !== e.organization.name" class="muted">{{ e.organization.submitted_name }}</div>
             </td>
             <td>{{ formatTime(e.submitted_at) }}</td>
-            <td><strong>{{ e.total_score }}</strong></td>
+            <td>
+              <strong>{{ e.total_score }}</strong>
+              <div v-if="e.evidence" class="evidence-mini">
+                <span v-if="e.evidence.pending" :title="t('evidence.pending')">⏳</span>
+                <span v-if="e.evidence.review" :title="t('evidence.review')">🟡 {{ e.evidence.review }}</span>
+                <span v-if="e.evidence.fail" :title="t('evidence.fail')">🔴 {{ e.evidence.fail }}</span>
+              </div>
+            </td>
             <td><span class="grade-pill" :style="{ background: GRADE_COLORS[e.grade] }">{{ t(`result.rank_${e.grade}`) }}</span></td>
             <td v-if="data.latest_only">
               {{ e.organization.submissions_count }}

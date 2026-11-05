@@ -234,6 +234,18 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "score-temp-accounts",
+      "name": "Tài khoản tạm (bỏ khi có SSO)",
+      "description": "Service account tạo tài khoản đơn vị bằng email khi chưa nối VNU-SSO (backend TempAccountController)",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "${TEMP_ACCOUNTS_CLIENT_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false
     }
   ],
   "components": {
@@ -371,6 +383,18 @@
           "temporary": false
         }
       ]
+    },
+    {
+      "username": "service-account-score-temp-accounts",
+      "enabled": true,
+      "serviceAccountClientId": "score-temp-accounts",
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "view-realm"
+        ]
+      }
     }
   ],
   "displayNameHtml": "${appTitle}",

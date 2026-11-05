@@ -6,11 +6,10 @@ use App\Models\Concerns\BelongsToTenant;
 use App\Support\UnitName;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use BelongsToTenant, Notifiable;
+    use BelongsToTenant;
 
     public const ROLES = ['admin', 'editor', 'viewer', 'unit', 'researcher'];
 
@@ -41,6 +40,15 @@ class User extends Authenticatable
     public function canSeeAllEvaluations(): bool
     {
         return $this->hasAnyRole('admin', 'editor', 'viewer');
+    }
+
+    /**
+     * Tài khoản đơn vị chưa gán đơn vị (tài khoản tạm khi chưa có SSO): tự nhập tên đơn vị khi nộp,
+     * chỉ xem được bài chính mình nộp.
+     */
+    public function isSelfServiceUnit(): bool
+    {
+        return $this->hasAnyRole('unit') && ! $this->unit_name && ! $this->canSeeAllEvaluations();
     }
 
     /** Khoá đơn vị của tài khoản đơn vị (null nếu không phải tài khoản đơn vị). */

@@ -23,3 +23,9 @@ export function t(key, vars = {}) {
 export function pick(obj, field) {
   return (lang.value === 'en' && obj?.[`${field}_en`]) || obj?.[field] || ''
 }
+
+/** Thời điểm theo giờ Việt Nam, định dạng theo ngôn ngữ đang chọn */
+export const formatTime = (iso) => new Date(iso).toLocaleString(lang.value === 'en' ? 'en-GB' : 'vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+
+/** Làm tròn 2 chữ số, bỏ số 0 thừa (67.5, 0.19, 85.75) */
+export const num = (n) => String(Math.round(Number(n) * 100) / 100)

@@ -17,6 +17,7 @@ class CriteriaController extends Controller
             'id' => $criteria->id,
             'version' => $criteria->version,
             'definition' => $criteria->definition,
+            'evidence_check' => (bool) config('evidence.enabled'),
         ]);
     }
 
@@ -27,6 +28,7 @@ class CriteriaController extends Controller
             'id' => $criteria->id,
             'version' => $criteria->version,
             'definition' => $criteria->definition,
+            'evidence_check' => (bool) config('evidence.enabled'),
         ]);
     }
 }

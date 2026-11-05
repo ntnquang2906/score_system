@@ -19,6 +19,7 @@ const FUNCTION_ORDER = ['basic', 'applied', 'tech', 'policy']
 const DRAFT_KEY = `score_form_draft_v2_${session.user.id}`
 
 const definition = ref(null)
+const evidenceCheck = ref(false)   // hệ thống tự đọc tệp minh chứng: trả lời Có mà không có tệp => 0 điểm
 const loadError = ref('')
 const submitting = ref(false)
 const draftRestored = ref(false)
@@ -29,7 +30,8 @@ const form = reactive({ organization_name: '', selected: [], weights: {}, answer
 // Tệp không lưu được vào bản nháp (trình duyệt không cho), giữ riêng
 const files = reactive({})
 
-const unitOnly = !editing && isUnitOnly()
+// Tài khoản đơn vị đã gán đơn vị: không nhập tên đơn vị (tài khoản tạm chưa gán đơn vị thì vẫn nhập)
+const unitOnly = !editing && isUnitOnly() && !!session.user.unit_name
 const functionKeys = computed(() => {
   const keys = Object.keys(definition.value?.functions || {})
   return [...FUNCTION_ORDER.filter((k) => keys.includes(k)), ...keys.filter((k) => !FUNCTION_ORDER.includes(k))]
@@ -123,7 +125,9 @@ onMounted(async () => {
       await loadForEdit()
     } else {
       loadDraft()
-      definition.value = (await api.get('/criteria/active')).definition
+      const criteria = await api.get('/criteria/active')
+      evidenceCheck.value = criteria.evidence_check
+      definition.value = criteria.definition
     }
   } catch (e) {
     loadError.value = e.status === 403 ? t('common.no_access') : e.message
@@ -145,6 +149,7 @@ async function loadForEdit() {
   form.selected = [...e.functions]
   form.weights = Object.fromEntries(Object.entries(e.answers.weights || {}).map(([k, v]) => [k, String(v)]))
   form.answers = JSON.parse(JSON.stringify(e.answers.answers || {}))
+  evidenceCheck.value = criteria.evidence_check
   definition.value = criteria.definition
 }
 
@@ -400,8 +405,13 @@ async function submit() {
                 {{ errors[`answers.${func}.${q.id}.evidence_text`] }}
               </div>
               <div v-for="(m, i) in Object.entries(errors).filter(([k]) => k.startsWith(`evidence.${func}.${q.id}`))" :key="i" class="field-error">{{ m[1] }}</div>
+              <div
+                v-if="evidenceCheck && answer(func, q.id).yes === '1' && !fileList(func, q.id).length && !keptFiles(func, q.id).length"
+                class="evidence-warning">
+                {{ t('form.evidence_file_required') }}
+              </div>
               <small>
-                {{ t('form.evidence_help') }}
+                {{ evidenceCheck ? t('form.evidence_help_auto') : t('form.evidence_help') }}
                 <br><em>{{ t('form.evidence_note') }}</em>
               </small>
             </div>

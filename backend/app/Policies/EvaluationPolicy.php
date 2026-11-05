@@ -9,13 +9,14 @@ class EvaluationPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->canSeeAllEvaluations() || $user->unitKey() !== null;
+        return $user->canSeeAllEvaluations() || $user->unitKey() !== null || $user->isSelfServiceUnit();
     }
 
     public function view(User $user, Evaluation $evaluation): bool
     {
         return $user->canSeeAllEvaluations()
-            || ($user->unitKey() !== null && $evaluation->organization->normalized_key === $user->unitKey());
+            || ($user->unitKey() !== null && $evaluation->organization->normalized_key === $user->unitKey())
+            || ($user->isSelfServiceUnit() && (int) $evaluation->submitted_by === $user->id);
     }
 
     public function create(User $user): bool

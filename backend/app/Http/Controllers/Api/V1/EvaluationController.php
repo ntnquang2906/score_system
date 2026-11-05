@@ -30,7 +30,9 @@ class EvaluationController extends Controller
         $user = $request->user();
 
         $scope = Evaluation::query();
-        if (! $user->canSeeAllEvaluations()) {
+        if ($user->isSelfServiceUnit()) {
+            $scope->where('submitted_by', $user->id);
+        } elseif (! $user->canSeeAllEvaluations()) {
             $scope->whereHas('organization', fn ($q) => $q->where('normalized_key', $user->unitKey()));
         }
 
@@ -80,13 +82,7 @@ class EvaluationController extends Controller
     {
         Gate::authorize('create', Evaluation::class);
 
-        $evaluation = $submit->handle(
-            $request->user(),
-            $request->except('evidence'),
-            $request->file('evidence', []),
-            $request->ip(),
-            $request->userAgent(),
-        );
+        $evaluation = $submit->handle($request->user(), $request->except('evidence'), $request->file('evidence', []), $request);
 
         return new EvaluationResource($evaluation->load('organization', 'submitter', 'attachments'));
     }
@@ -100,13 +96,11 @@ class EvaluationController extends Controller
         Gate::authorize('update', $evaluation);
 
         $evaluation = $submit->update(
-            $request->user(),
             $evaluation,
             $request->except('evidence', 'remove_attachments', '_method'),
             $request->file('evidence', []),
             array_map('intval', (array) $request->input('remove_attachments', [])),
-            $request->ip(),
-            $request->userAgent(),
+            $request,
         );
 
         return new EvaluationResource($evaluation->fresh()->load('organization', 'submitter', 'attachments'));

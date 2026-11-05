@@ -1,185 +1,157 @@
 # Hệ thống đánh giá tổ chức KH&CN (score_system)
 
-Nền tảng đánh giá, chấm điểm tổ chức khoa học & công nghệ và tra cứu điểm KHCN cho cán bộ, giảng viên.
-
-- **Multi-tenant:** nhiều đơn vị đào tạo dùng chung một hệ thống, dữ liệu cách ly hoàn toàn.
-- **Đăng nhập một lần (SSO):** qua Keycloak, tích hợp VNU-SSO và SSO của các đơn vị đào tạo.
-- **API chuẩn REST** (`/api/v1`) dùng chung cho web và app mobile (iOS & Android).
-- **Container hoá** toàn bộ bằng Docker.
+Nền tảng đánh giá, chấm điểm tổ chức khoa học & công nghệ của ĐHQGHN: đơn vị kê khai theo bộ tiêu chí kèm minh chứng,
+hệ thống tự chấm điểm, tự kiểm tra minh chứng và lãnh đạo xem lại. Nhiều tenant (đơn vị đào tạo) dùng chung, dữ liệu cách ly;
+đăng nhập qua Keycloak (sau này nối VNU-SSO); một API REST dùng chung cho web và app mobile.
 
 ## Kiến trúc
 
 ```
-            :6868
-  Web / App ──► Nginx ─┬─ /api/*  ─► Laravel 12 (PHP-FPM 8.3) ─┬─► PostgreSQL 17
-                       │                + queue + scheduler      ├─► Redis (cache, queue)
-                       │                                         └─► SeaweedFS (S3: file minh chứng)
-                       ├─ /auth/* ─► Keycloak 26 ──► VNU-SSO / SSO các đơn vị
-                       └─ /       ─► frontend (SPA)
+  Web / App ──► Nginx ─┬─ /api/*  ─► Laravel 12 (PHP-FPM) ──┬─► PostgreSQL 17 (dữ liệu, Row-Level Security)
+                       │            + queue (việc chạy nền)  ├─► Redis (cache, hàng đợi)
+                       │                                     ├─► SeaweedFS (S3: tệp minh chứng)
+                       │                                     └─► evidence-ai (đọc tệp minh chứng)
+                       ├─ /auth/* ─► Keycloak 26 ──► (VNU-SSO / SSO các đơn vị)
+                       └─ /       ─► frontend (Vue SPA)
 ```
 
-| Thư mục | Nội dung |
+| Thành phần | Vai trò |
 |---|---|
-| `backend/` | Laravel API |
-| `frontend/` | SPA web, dùng chung cho app mobile |
-| `mobile-app/` | App iOS/Android (Capacitor) |
-| `docker/` | Dockerfile PHP, cấu hình Nginx, khởi tạo Postgres, realm Keycloak, SeaweedFS |
+| Nginx | Cổng vào duy nhất; chuyển `/api` vào Laravel, `/auth` vào Keycloak, còn lại là SPA |
+| Laravel (`app`) | API REST `/api/v1`: xác thực token, phân quyền, chấm điểm, lưu bài, xuất Excel |
+| `queue` | Worker chạy nền: đọc tệp minh chứng (hàng đợi `evidence`) |
+| `evidence-ai` | Dịch vụ Python nội bộ: trích chữ, OCR tiếng Việt, tìm con dấu/chữ ký; không gửi dữ liệu ra ngoài |
+| PostgreSQL | Dữ liệu ứng dụng và Keycloak; API dùng role không sở hữu bảng nên RLS luôn có hiệu lực |
+| SeaweedFS | Kho S3 lưu tệp minh chứng; chỉ tải qua API (có kiểm tra quyền) |
+| Keycloak | Đăng nhập (OIDC, Authorization Code + PKCE), vai trò, broker tới SSO bên ngoài |
 
-### Multi-tenant
-- Tenant là đơn vị đào tạo (bảng `tenants`; `vnu` là tenant mặc định).
-- Tenant **lấy từ claim `tenant` trong token**, không lấy từ tham số client gửi lên.
-- Mọi bảng nghiệp vụ có `tenant_id` và được bảo vệ 2 lớp:
-  1. Global scope Eloquent (`App\Models\Concerns\BelongsToTenant`).
-  2. **Postgres Row-Level Security**: API kết nối bằng role `score_app` (không sở hữu bảng), nên RLS luôn có hiệu lực.
-- Migration chạy bằng role owner `score` thông qua connection `pgsql_owner`.
+## Cấu trúc code
 
-### Đăng nhập
-- Backend chỉ xác thực JWT do Keycloak phát hành (kiểm tra chữ ký JWKS, `iss`, `aud=score-api`), xem `backend/app/Auth/`.
-- Keycloak không cố định hostname: mỗi link truy cập cho ra 1 `iss` riêng. **Thêm link mới** thì cần: (1) thêm vào `OIDC_ISSUER` trong `backend/.env` (cách nhau dấu phẩy) rồi `php artisan config:clear`; (2) thêm `https://<link>/*` vào *Valid redirect URIs* của client `score-web` (Keycloak admin, realm `score`); (3) nếu là link công khai qua HTTP thì cho chuyển sang HTTPS như mynetname trong `docker/nginx/default.conf`.
-- Lần đầu người dùng gọi API, hệ thống tự tạo hồ sơ trong bảng `users`, khớp theo claim `sub`.
-- Vai trò (realm roles): `admin`, `editor`, `viewer`, `unit`, `researcher`. Kiểm tra quyền bằng middleware `role:editor,viewer`.
-- Web và mobile đăng nhập theo luồng Authorization Code + PKCE, dùng client `score-web`.
-
-**Thêm SSO của một đơn vị** (VNU-SSO hoặc trường khác) chỉ cần cấu hình trong Keycloak, không phải sửa code:
-1. Thêm tenant vào bảng `tenants`.
-2. Keycloak → realm `score` → *Identity providers*: thêm provider (OIDC/SAML), ví dụ alias `vnu-sso`.
-3. Thêm mapper *Hardcoded attribute* `tenant=<mã tenant>` và map thuộc tính mã cán bộ sang `staff_code`.
+```
+backend/                     Laravel API
+  app/Auth/                  Xác thực JWT của Keycloak (JWKS, iss, aud), tạo/cập nhật user nội bộ theo claim sub
+  app/Domain/Scoring/        Chấm điểm: 26 loại tính điểm theo bộ tiêu chí, tổng E, xếp loại
+  app/Domain/Evaluation/     Nộp/sửa bài (SubmitEvaluation), kiểm tra dữ liệu (EvaluationRules), xuất Excel
+  app/Domain/Evidence/       Kiểm tra minh chứng: gọi evidence-ai, kết luận từng tiêu chí, chấm lại điểm
+  app/Http/Controllers/Api/V1/   Endpoint REST; app/Policies/ phân quyền; app/Http/Resources/ định dạng JSON
+  app/Jobs/                  CheckEvaluationEvidence (đọc tệp chạy nền)
+  app/Models/                Tenant, User, Organization, CriteriaVersion, Evaluation, Attachment, EvidenceReview, AuditLog
+  database/data/criteria_v1.json   Bộ tiêu chí (câu hỏi, cách tính điểm, quy tắc kiểm tra minh chứng)
+  database/migrations/       Schema, Row-Level Security
+  config/                    Chỉ ghi phần khác mặc định của Laravel (oidc.php, evidence.php...)
+  tests/                     Unit (chấm điểm, đối chiếu ~50.000 trường hợp với hệ cũ; kiểm tra minh chứng) và Feature (API)
+frontend/src/                Vue 3 SPA
+  auth.js                    Đăng nhập OIDC + PKCE (chạy được cả HTTP lẫn HTTPS)
+  api.js, session.js         Gọi API, thông tin người dùng và quyền
+  views/                     Form đánh giá, danh sách, kết quả, tổng hợp, trang cá nhân
+  locales/                   Tiếng Việt / tiếng Anh
+mobile-app/                  App Android/iOS (Capacitor) mở giao diện web
+docker/
+  evidence-ai/app.py         Dịch vụ đọc tệp minh chứng
+  keycloak/                  Realm score (client, vai trò, mapper) và giao diện đăng nhập riêng
+  nginx/, php/, postgres/, seaweedfs/
+```
 
 ## Cài đặt
 
-Yêu cầu: Docker và Docker Compose. Không cần cài PHP hay Composer trên máy.
+Yêu cầu: Docker, Docker Compose; Node.js (chỉ để build giao diện). Không cần cài PHP/Composer trên máy.
 
 ```bash
-cp .env.example .env                 # sửa UID/GID (id -u, id -g), mật khẩu
-cp backend/.env.example backend/.env
-docker compose up -d --build
+cp .env.example .env                 # sửa UID/GID (id -u, id -g), mật khẩu; TEMP_ACCOUNTS_CLIENT_SECRET=$(openssl rand -hex 24)
+cp backend/.env.example backend/.env # sửa OIDC_ISSUER theo các link truy cập (cách nhau dấu phẩy), mật khẩu DB/S3
+docker compose up -d --build         # build cả image PHP và evidence-ai
 
 # lần đầu
 docker compose exec app composer install
 docker compose exec app php artisan key:generate
-docker compose exec app php artisan migrate --database=pgsql_owner --seed
+docker compose exec app php artisan migrate --database=pgsql_owner --seed   # schema + tenant vnu + bộ tiêu chí v1
+
+cd frontend && npm install && npm run build   # tạo frontend/dist (Nginx phục vụ thư mục này)
 ```
 
-| Địa chỉ | |
+- Link truy cập công khai: **https://scoring.datasphere.id.vn/** và **http://a36a0a125b14.sn.mynetname.net:6868/** (tự chuyển sang link HTTPS);
+  quản trị Keycloak tại `/auth/admin` (`admin` / `KEYCLOAK_ADMIN_PASSWORD`). Nginx nghe ở cổng `NGINX_PORT` (mặc định 6868).
+- Realm `score` được import tự động lần đầu từ `docker/keycloak/import/realm-score.json`, gồm vai trò, client và vài tài khoản thử
+  (mật khẩu `Dev@12345`, xoá trước khi dùng thật). Thêm link truy cập mới: thêm vào `OIDC_ISSUER` và *Valid redirect URIs* của client `score-web`.
+- Sửa code backend: `docker compose restart queue` (worker giữ code cũ); sửa `docker/evidence-ai/`: `docker compose up -d --build evidence-ai`;
+  sửa giao diện: `npm run build`.
+- Chạy test: `docker compose exec app php artisan test` (dùng database riêng `score_test`, không đụng dữ liệu thật).
+
+## Vai trò
+
+Vai trò là realm role trong Keycloak, đi theo token; quyền kiểm tra ở `app/Policies/EvaluationPolicy.php`.
+
+| Vai trò | Quyền |
 |---|---|
-| https://scoring.datasphere.id.vn/ | Web công khai (Cloudflare giữ HTTPS, chuyển vào nginx :6868) |
-| http://192.168.88.13:6868/ | Web trong mạng nội bộ |
-| http://a36a0a125b14.sn.mynetname.net:6868/ | Tự chuyển sang link HTTPS ở trên (Keycloak không cho đăng nhập qua HTTP từ ngoài) |
-| http://192.168.88.13:6868/api/v1/health | Health check |
-| http://192.168.88.13:6868/auth/admin | Quản trị Keycloak (`admin` / `KEYCLOAK_ADMIN_PASSWORD`) |
-| `127.0.0.1:5442` | PostgreSQL (DBeaver/psql, user `score`) |
+| `admin`, `editor` (lãnh đạo, quản trị) | Xem mọi bài trong tenant, nộp bài cho bất kỳ đơn vị, sửa bài (chấm lại), xem/tải tổng hợp, đặt lại kết luận minh chứng |
+| `viewer` (lãnh đạo chỉ xem) | Xem mọi bài, xem/tải tổng hợp; không nộp, không sửa |
+| `unit` (đơn vị) | Nộp bài và xem bài. Đã gán đơn vị (`unit_name`): chỉ nộp cho đơn vị mình, xem mọi bài của đơn vị. Chưa gán (tài khoản tạm): tự nhập tên đơn vị, chỉ xem bài mình nộp |
+| `researcher` (cán bộ, giảng viên) | Đăng nhập; tra cứu điểm KHCN cá nhân sẽ có ở phiên bản sau |
 
-Tài khoản trong realm `score`:
-- Tài khoản cố định chuyển từ hệ cũ (`admin`, `Tuttt`, `Sonpb`, `Dungtt`), dùng **mật khẩu như hệ cũ**, vai trò `editor`.
-- Tài khoản thử (mật khẩu `Dev@12345`): `editor`, `viewer`, `unit.uet`, `gv.test`. Xoá trước khi dùng thật.
+## Tính năng
 
-Mọi lần sửa bài được ghi vào bảng `audit_logs` (ai sửa, lúc nào, giá trị trước/sau).
+- **Form đánh giá** sinh từ bộ tiêu chí (4 chức năng: nghiên cứu cơ bản, ứng dụng, phát triển công nghệ, chính sách; 52 tiêu chí):
+  chọn chức năng và trọng số (tổng 100%), trả lời Có/Không, nhập số liệu, mô tả và tệp minh chứng (mọi định dạng); tự lưu nháp.
+- **Chấm điểm tự động** kèm lời giải thích từng tiêu chí; điểm quy đổi theo trọng số, tổng E và xếp loại A ≥ 80, B ≥ 60, C ≥ 40, D < 40.
+- **Tự kiểm tra minh chứng**: Đạt / Cần xem lại / Không đạt cho từng tiêu chí, có lý do và trích dẫn; lãnh đạo đặt lại kết luận.
+- **Danh sách và lịch sử**: lãnh đạo thấy lần nộp mới nhất của mỗi đơn vị, xem được lịch sử nộp; lọc theo tên, xếp loại.
+- **Xuất Excel** từng bài và file tổng hợp mọi đơn vị (cùng cột với hệ cũ); xem tổng hợp trên web.
+- **Sửa bài** (lãnh đạo): sửa số liệu, thêm/xoá tệp, chấm lại; bài nhập từ hệ PHP cũ chỉ đổi được tên đơn vị.
+- **Nhật ký** (`audit_logs`): nộp, sửa, chấm lại do minh chứng, lãnh đạo đặt lại kết luận — ai, lúc nào, trước/sau.
+- **Song ngữ** Việt/Anh; app mobile dùng chung giao diện web.
 
-Lấy token để thử API (client `score-dev-cli` chỉ dùng cho dev, **phải tắt ở production**):
+## Luồng chính
 
-```bash
-TOKEN=$(curl -s -X POST http://192.168.88.13:6868/auth/realms/score/protocol/openid-connect/token \
-  -d grant_type=password -d client_id=score-dev-cli -d username=gv.test -d 'password=Dev@12345' | jq -r .access_token)
-curl -H "Authorization: Bearer $TOKEN" http://192.168.88.13:6868/api/v1/me
-```
+### Đăng nhập và multi-tenant
 
-## API
+1. SPA chuyển sang Keycloak (Authorization Code + PKCE, client `score-web`), nhận access token.
+2. Mỗi request API kèm Bearer token; backend kiểm tra chữ ký (JWKS), `iss` (mỗi link truy cập 1 issuer, khai báo trong `OIDC_ISSUER`), `aud=score-api`.
+3. Tenant lấy từ claim `tenant` trong token (không lấy từ tham số client). Backend đặt `app.tenant_id` cho phiên Postgres:
+   dữ liệu được lọc 2 lớp — global scope Eloquent (`BelongsToTenant`) và Row-Level Security.
+4. Lần đầu gọi API, hồ sơ người dùng được tạo trong `users` (khớp claim `sub`), vai trò và `unit_name` cập nhật theo token.
+5. Nối SSO một đơn vị chỉ cần cấu hình Keycloak: thêm Identity provider (OIDC/SAML) và mapper gán `tenant`, `staff_code`.
 
-Tất cả endpoint (trừ `health`) yêu cầu `Authorization: Bearer <access token>`.
+### Nộp bài và chấm điểm
+
+1. SPA lấy bộ tiêu chí đang áp dụng (`criteria_versions`, có phiên bản), dựng form; gửi multipart kèm tệp.
+2. `EvaluationRules` kiểm tra dữ liệu; `EvaluationScorer` chấm từng tiêu chí theo `scoring.type` và số liệu kê khai.
+3. Lưu bài (trỏ đúng phiên bản tiêu chí), tệp lên S3, nhật ký — trong 1 transaction (lỗi thì xoá tệp đã đẩy lên S3).
+4. Bật kiểm tra minh chứng: kết luận ngay các tiêu chí không có tệp, rồi giao job đọc tệp cho hàng đợi.
+
+### Kiểm tra minh chứng
+
+1. Job `CheckEvaluationEvidence` gửi lần lượt từng tệp sang `evidence-ai`. Dịch vụ nhận mọi định dạng (PDF, ảnh kể cả HEIC/TIFF,
+   Word/Excel/PowerPoint mọi đời qua LibreOffice, tệp nén đọc từng tệp bên trong), trích chữ/OCR tiếng Việt (tự OCR lại khi lớp chữ
+   PDF lỗi phông), tìm con dấu đỏ và chữ ký (chữ ký số, mực xanh, nét bút đè dấu, chỗ ký trống) — chỉ trả **dữ kiện**,
+   lưu ở `attachments.analysis`.
+2. `EvidenceChecker` kết luận từng tiêu chí theo quy tắc `evidence` trong bộ tiêu chí (`documents` loại văn bản, `keywords` nội dung,
+   `signed` cần dấu + chữ ký, `period_years`, `count` đối chiếu ô kê khai); chủ đề văn bản xét theo trích yếu ("Về việc..."):
+   - 🔴 **Không đạt → 0 điểm**: không có tệp và mô tả không nhắc tới nội dung tiêu chí; tệp không đọc được; không liên quan; văn bản của đơn vị khác
+   - 🟡 **Cần xem lại → giữ điểm kê khai**: chỉ có mô tả nhưng nêu đúng nội dung; thiếu dấu/chữ ký; sai năm; không thấy tên đơn vị;
+     trích yếu chưa rõ; số mục ít hơn kê khai; tệp Word/Excel (bản sửa được); định dạng hoặc dịch vụ đọc lỗi
+   - 🟢 **Đạt → giữ điểm kê khai**
+3. `ApplyEvidenceChecks` chấm lại cả bài, ghi lời giải thích (lý do, trích dẫn, trang) vào từng tiêu chí; trang kết quả tự cập nhật khi đọc xong.
+4. Lãnh đạo đặt lại kết luận kèm lý do (`evidence_reviews`); đổi tệp của tiêu chí thì kết luận đó hết hiệu lực.
+   Dữ kiện tệp đã lưu nên sửa quy tắc là chấm lại được ngay, không phải đọc lại tệp.
+5. Tắt bằng `EVIDENCE_CHECK_ENABLED=false` (chấm như cũ theo số liệu kê khai). Khi có GPU: thêm mô hình thị giác – ngôn ngữ vào
+   `evidence-ai` (trả thêm dữ kiện), phần kết luận và giao diện giữ nguyên.
+
+## API (`/api/v1`)
+
+Mọi endpoint (trừ `health`, `temp-accounts`) cần `Authorization: Bearer <access token>`.
 
 | Method | Đường dẫn | Quyền | Mô tả |
 |---|---|---|---|
-| GET | `/api/v1/health` | công khai | Kiểm tra hệ thống |
-| GET | `/api/v1/me` | đã đăng nhập | Thông tin người dùng, vai trò, đơn vị |
-| GET | `/api/v1/criteria/active` | đã đăng nhập | Bộ tiêu chí đang áp dụng (để dựng form) |
-| GET | `/api/v1/criteria/{id}` | đã đăng nhập | 1 phiên bản bộ tiêu chí (form sửa bài) |
-| GET | `/api/v1/evaluations` | admin, editor, viewer, unit | Lãnh đạo: lần nộp cuối của mỗi đơn vị; `?organization_id=` xem lịch sử; lọc `?q=`, `?grade=` |
-| GET | `/api/v1/evaluations/{id}` | như trên | Chi tiết bài: điểm từng câu, giải thích, tệp |
-| POST | `/api/v1/evaluations` | admin, editor, unit | Nộp bài (JSON hoặc multipart kèm tệp) |
-| PUT | `/api/v1/evaluations/{id}` | admin, editor | Sửa bài, chấm lại điểm (bài nhập từ hệ cũ: chỉ đổi tên đơn vị) |
-| GET | `/api/v1/evaluations/{id}/export` | như xem bài | Tải Excel 1 bài |
-| GET | `/api/v1/evaluations/summary` | admin, editor, viewer | Dữ liệu file tổng hợp để xem trên web |
-| GET | `/api/v1/evaluations/summary/export` | admin, editor, viewer | Tải file tổng hợp (Excel) |
-| GET | `/api/v1/attachments/{id}/download` | như xem bài | Tải tệp minh chứng |
-
-Tài khoản đơn vị (`unit`) chỉ xem và nộp bài cho chính đơn vị mình.
-
-### Chấm điểm
-
-- Bộ tiêu chí lưu trong bảng `criteria_versions` (JSON, có phiên bản). Mỗi bài trỏ tới đúng phiên bản đã dùng.
-- Logic chấm điểm nằm ở `backend/app/Domain/Scoring/`, gồm 26 loại tính điểm. Tổng E là tổng điểm quy đổi theo trọng số; xếp loại: A ≥ 80, B ≥ 60, C ≥ 40, D < 40.
-- `tests/Unit/Scoring/LegacyParityTest.php` đối chiếu gần 50.000 trường hợp (gồm mọi giá trị biên) để đảm bảo điểm và lời giải thích không đổi.
-
-## Giao diện web (`frontend/`)
-
-Vue 3 + Vite, chạy ở đường dẫn gốc `/`. Nginx phục vụ thư mục `frontend/dist/`, nên sau khi sửa code phải build lại:
-
-```bash
-cd frontend
-npm install        # lần đầu
-npm run build      # tạo frontend/dist/, tải lại trang là thấy
-npm run dev        # chế độ phát triển: http://localhost:5173/ (tự tải lại khi sửa code)
-```
-
-- Đăng nhập: `src/auth.js` (OIDC + PKCE với Keycloak, chạy được cả HTTP lẫn HTTPS).
-- Gọi API: `src/api.js`. Bản dịch Việt/Anh: `src/locales/`.
-- Trang: `src/views/` gồm form đánh giá, danh sách, kết quả, trang cá nhân.
-
-## Test
-
-```bash
-docker compose exec app php artisan test
-```
-
-Test chạy trên database riêng `score_test`, có chốt chặn nên không bao giờ chạy trên database thật.
-
-## Vận hành
-
-### Lệnh thường dùng
-
-```bash
-docker compose ps                                               # trạng thái các dịch vụ
-docker compose logs -f app keycloak                             # xem log
-docker compose restart app                                      # khởi động lại một dịch vụ
-docker compose exec app php artisan make:migration ...          # tạo migration
-docker compose exec app php artisan migrate --database=pgsql_owner
-docker compose down                                             # dừng (giữ dữ liệu)
-```
-
-> ⚠️ `docker compose down -v` **xoá toàn bộ dữ liệu** (database, file). Không chạy lệnh này trên production.
-
-### Dữ liệu
-
-| Dữ liệu | Nơi lưu |
-|---|---|
-| Database (ứng dụng + Keycloak) | Docker volume `score_pgdata` |
-| File minh chứng (S3) | Docker volume `score_s3data` |
-| Cache, hàng đợi | Docker volume `score_redisdata` |
-| Cấu hình, mật khẩu | `.env`, `backend/.env` (không commit) |
-
-Sao lưu database (nên đặt cron chạy hằng ngày):
-
-```bash
-docker compose exec -T postgres pg_dumpall -U score | gzip > ~/backup/score_$(date +%F).sql.gz
-```
-
-### Tài khoản hệ thống (đổi trước khi chạy production)
-
-| Tài khoản | Cấu hình tại |
-|---|---|
-| Keycloak admin | `KEYCLOAK_ADMIN_PASSWORD` trong `.env` |
-| Postgres owner `score` | `POSTGRES_PASSWORD` trong `.env` và `DB_OWNER_PASSWORD` trong `backend/.env` |
-| Postgres ứng dụng `score_app` | `docker/postgres/01-init.sql` và `DB_PASSWORD` trong `backend/.env` |
-| Kho file S3 | `docker/seaweedfs/s3.json` và `AWS_*` trong `backend/.env` |
-
-Mật khẩu Postgres chỉ được áp dụng khi khởi tạo database lần đầu.
-
-## Lộ trình
-
-- [x] Hạ tầng Docker (Nginx, PHP-FPM, PostgreSQL, Redis, S3, Keycloak)
-- [x] Schema multi-tenant và Row-Level Security, xác thực OIDC, `/api/v1/me`
-- [ ] Dịch vụ chấm điểm theo bộ tiêu chí có phiên bản
-- [ ] API đánh giá, upload minh chứng, xuất Excel
-- [ ] Frontend SPA
-- [ ] App mobile: tra cứu điểm KHCN, thông báo đề tài/công bố (push FCM), đăng nhập PKCE
-- [ ] Tích hợp VNU-SSO
+| GET | `/health` | công khai | Kiểm tra hệ thống |
+| POST | `/temp-accounts` | công khai, 10 lần/phút | Tạo tài khoản tạm bằng email (đến khi có SSO) |
+| GET | `/me` | đã đăng nhập | Người dùng, vai trò, đơn vị, tenant |
+| GET | `/criteria/active`, `/criteria/{id}` | đã đăng nhập | Bộ tiêu chí đang áp dụng / theo phiên bản |
+| GET | `/evaluations` | xem bài | Danh sách theo phạm vi quyền; `?organization_id=` lịch sử, `?q=`, `?grade=` |
+| GET | `/evaluations/{id}` | xem bài | Chi tiết: điểm, giải thích, kết luận minh chứng, tệp |
+| POST | `/evaluations` | admin, editor, unit | Nộp bài (JSON hoặc multipart kèm tệp) |
+| PUT | `/evaluations/{id}` | admin, editor | Sửa bài, chấm lại |
+| GET | `/evaluations/{id}/export` | xem bài | Excel 1 bài |
+| GET | `/evaluations/summary`, `/summary/export` | admin, editor, viewer | Tổng hợp (JSON / Excel) |
+| PUT | `/evaluations/{id}/evidence` | admin, editor | Đặt lại kết luận minh chứng 1 tiêu chí (`question_key`, `verdict`, `reason`) |
+| POST | `/evaluations/{id}/evidence/recheck` | admin, editor | Đọc lại tệp chưa đọc được (`all=1`: mọi tệp) |
+| GET | `/attachments/{id}/download` | xem bài | Tải tệp minh chứng |

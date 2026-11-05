@@ -3,8 +3,11 @@
 namespace Tests\Feature;
 
 use App\Domain\Scoring\EvaluationScorer;
+use App\Models\Attachment;
+use App\Models\AuditLog;
 use App\Models\CriteriaVersion;
 use App\Models\Evaluation;
+use App\Models\Organization;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -239,7 +242,7 @@ class EvaluationApiTest extends TestCase
         }
         $edit['answers']['basic'][$firstQ]['evidence_text'] = '';
         $oldFile = $created['attachments'][0]['id'];
-        $oldKey = \App\Models\Attachment::find($oldFile)->object_key;
+        $oldKey = Attachment::find($oldFile)->object_key;
 
         // xoá tệp cũ mà không thêm tệp/mô tả mới -> thiếu minh chứng
         $this->putJson("/api/v1/evaluations/$id", $edit + ['remove_attachments' => [$oldFile]])
@@ -255,7 +258,7 @@ class EvaluationApiTest extends TestCase
             ->assertJsonCount(1, 'attachments')->assertJsonPath('attachments.0.name', 'moi.pdf');
         $this->assertEquals(0, $res->json('total_score'));
         Storage::disk('s3')->assertMissing($oldKey);
-        $log = \App\Models\AuditLog::where('action', 'evaluation.updated')->latest('id')->first();
+        $log = AuditLog::where('action', 'evaluation.updated')->latest('id')->first();
         $this->assertSame('Trường ĐH Công nghệ', $log->changes['before']['organization']);
         $this->assertSame(['cu.pdf'], $log->changes['before']['removed_files']);
         $this->assertSame('D', $log->changes['after']['grade']);
@@ -264,7 +267,7 @@ class EvaluationApiTest extends TestCase
     public function test_legacy_imported_submission_only_allows_renaming_unit(): void
     {
         $this->actingAsRole(['admin', 'editor']);
-        $org = \App\Models\Organization::create(['name' => 'Nguyễn Văn A', 'normalized_key' => 'nguyen_van_a']);
+        $org = Organization::create(['name' => 'Nguyễn Văn A', 'normalized_key' => 'nguyen_van_a']);
         $e = Evaluation::create([
             'organization_id' => $org->id, 'organization_name' => 'Nguyễn Văn A', 'functions' => ['basic'],
             'answers' => ['legacy' => true, 'answers' => []], 'result' => ['functions' => []],

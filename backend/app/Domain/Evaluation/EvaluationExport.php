@@ -42,7 +42,7 @@ final class EvaluationExport
         $time = $e->submitted_at->setTimezone('Asia/Ho_Chi_Minh')->format('Y-m-d H:i:s');
         $grade = Grade::tryFrom((string) $e->grade)?->label('vi') ?? $e->grade;
         $answers = $e->answers['answers'] ?? [];
-        $legacy = ! empty($e->answers['legacy']);
+        $legacy = $e->isLegacy();
         $files = $e->attachments->groupBy('question_key');
 
         $rows = [];

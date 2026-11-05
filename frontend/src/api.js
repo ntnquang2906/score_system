@@ -28,6 +28,11 @@ export const api = {
       ? { body }
       : { body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } }),
   })).json(),
+  put: async (path, body) => (await request(path, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  })).json(),
   /** Tải tệp về máy (Excel, minh chứng) - phải kèm token nên không dùng link thường được */
   async download(path, fallbackName) {
     const res = await request(path)

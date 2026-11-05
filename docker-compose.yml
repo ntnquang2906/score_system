@@ -8,6 +8,8 @@ x-php: &php
       GID: ${GID:-1000}
   image: score-php:dev
   env_file: backend/.env
+  environment:
+    TEMP_ACCOUNTS_CLIENT_SECRET: ${TEMP_ACCOUNTS_CLIENT_SECRET:-}   # tạm thời khi chưa có SSO
   volumes:
     - ./backend:/var/www/backend
   depends_on:
@@ -30,13 +32,19 @@ services:
   app:
     <<: *php
 
+  # Việc chạy nền: đọc tệp minh chứng (hàng đợi evidence, mỗi job tới 15 phút), rồi tới hàng đợi chung
   queue:
     <<: *php
-    command: php artisan queue:work --tries=3 --max-time=3600
+    command: php artisan queue:work --queue=evidence,default --tries=2 --timeout=900 --max-time=3600
 
-  scheduler:
-    <<: *php
-    command: php artisan schedule:work
+  # Dịch vụ đọc tệp minh chứng (OCR tiếng Việt, tìm con dấu/chữ ký). Chỉ mở trong mạng nội bộ docker.
+  # Giới hạn CPU vì server dùng chung với nhóm khác.
+  evidence-ai:
+    build: ./docker/evidence-ai
+    image: score-evidence-ai:dev
+    cpus: 2
+    mem_limit: 2g
+    restart: unless-stopped
 
   postgres:
     image: postgres:17-alpine
@@ -98,6 +106,7 @@ services:
       # Mỗi link cho ra 1 issuer riêng -> liệt kê đủ trong OIDC_ISSUER của backend/.env
       KC_HOSTNAME_STRICT: "false"
       KC_PROXY_HEADERS: xforwarded
+      TEMP_ACCOUNTS_CLIENT_SECRET: ${TEMP_ACCOUNTS_CLIENT_SECRET:-}   # dùng trong realm-score.json khi import lần đầu
       KC_HTTP_ENABLED: "true"
     volumes:
       - ./docker/keycloak/import:/opt/keycloak/data/import:ro

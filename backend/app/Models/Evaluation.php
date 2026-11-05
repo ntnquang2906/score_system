@@ -27,6 +27,12 @@ class Evaluation extends Model
         ];
     }
 
+    /** Bài nhập từ hệ PHP cũ: không có số liệu gốc, không chấm lại được */
+    public function isLegacy(): bool
+    {
+        return ! empty($this->answers['legacy']) || ! $this->criteria_version_id;
+    }
+
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
@@ -45,5 +51,10 @@ class Evaluation extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(Attachment::class);
+    }
+
+    public function evidenceReviews(): HasMany
+    {
+        return $this->hasMany(EvidenceReview::class);
     }
 }

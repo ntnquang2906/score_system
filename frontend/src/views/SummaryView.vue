@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { api } from '../api'
-import { lang, t } from '../i18n'
+import { formatTime, lang, num, t } from '../i18n'
 
 const FUNCTION_ORDER = ['basic', 'applied', 'tech', 'policy']
 const GRADE_COLORS = { A: '#16a34a', B: '#2563eb', C: '#f59e0b', D: '#dc2626' }
@@ -51,8 +51,6 @@ const filteredRows = computed(() => {
 
 // Số lẻ dài -> làm tròn 2 chữ số khi hiển thị
 const cell = (v) => (typeof v === 'number' && !Number.isInteger(v) ? Math.round(v * 100) / 100 : v)
-const num = (n) => String(Math.round(Number(n) * 100) / 100)
-const formatTime = (iso) => new Date(iso).toLocaleString(lang.value === 'en' ? 'en-GB' : 'vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
 const TZ = { timeZone: 'Asia/Ho_Chi_Minh' }
 const formatDate = (iso) => new Date(iso).toLocaleDateString(lang.value === 'en' ? 'en-GB' : 'vi-VN', TZ)
 const formatClock = (iso) => new Date(iso).toLocaleTimeString(lang.value === 'en' ? 'en-GB' : 'vi-VN', TZ)

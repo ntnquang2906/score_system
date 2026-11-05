@@ -108,45 +108,6 @@ a {
     font-weight: bold
 }
 
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 24px
-}
-
-.error-message {
-    background-color: #f8d7da;
-    color: #721c24;
-    padding: 15px;
-    border: 1px solid #f5c6cb;
-    border-radius: 4px;
-    margin-bottom: 20px
-}
-
-.success-message {
-    background-color: #d4edda;
-    color: #155724;
-    padding: 15px;
-    border: 1px solid #c3e6cb;
-    border-radius: 4px;
-    margin-bottom: 20px
-}
-
-.success-message a {
-    display: inline-block;
-    margin-top: 10px;
-    padding: 10px 20px;
-    background-color: #28a745;
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    font-weight: bold
-}
-
-.success-message a:hover {
-    background-color: #218838
-}
-
 .table-wrap {
     overflow-x: auto
 }
@@ -169,8 +130,10 @@ a {
 }
 
 .explain-item {
+    position: relative;
     background: #f9fafb;
     border: 1px solid #e5e7eb;
+    border-left: 4px solid #cbd5e1;
     border-radius: 8px;
     padding: 10px 14px;
     margin: 8px 0
@@ -201,17 +164,6 @@ a {
     padding: 16px 18px;
     border-radius: 12px;
     margin-bottom: 20px;
-}
-
-.report-banner-icon {
-    font-size: 22px;
-    line-height: 1
-}
-
-.report-banner-sub {
-    margin-top: 6px;
-    font-size: 0.9em;
-    opacity: 0.85
 }
 
 .report-banner-success {
@@ -411,11 +363,6 @@ a {
     border-color: #a7f3d0
 }
 
-.explain-item {
-    position: relative;
-    border-left: 4px solid #cbd5e1
-}
-
 .explain-item.answer-yes {
     border-left-color: #16a34a;
     background: #f0fdf4
@@ -588,4 +535,62 @@ a {
 
 .app-dialog-actions button.secondary {
     background: #64748b
+}
+
+/* ---- Kiểm tra minh chứng tự động ---- */
+.evidence-pill {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 999px;
+    margin-left: 6px;
+    border: 1px solid transparent
+}
+
+.evidence-pill.pass { background: #dcfce7; color: #166534 }
+.evidence-pill.review { background: #fef9c3; color: #854d0e }
+.evidence-pill.fail { background: #fee2e2; color: #991b1b }
+.evidence-pill.pending { background: #e0e7ff; color: #3730a3 }
+
+.evidence-summary {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 16px 0
+}
+
+.evidence-summary-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px }
+.evidence-summary p { font-size: 14px; color: #475569; margin: 4px 0 }
+.evidence-summary-actions { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-top: 8px; font-size: 14px }
+.evidence-summary-actions input { width: auto; margin-right: 4px }
+
+.evidence-facts { font-size: 12px; color: #475569; margin-top: 2px }
+.evidence-quote { font-size: 12px; color: #64748b; font-style: italic; margin-top: 2px }
+
+.evidence-review { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
+.evidence-review .link-btn { color: #1d4ed8 }
+.evidence-review .link-btn:hover { color: #1e3a8a }
+.evidence-review textarea { width: 100%; font-size: 14px }
+.evidence-review button:not(.link-btn) { width: auto; padding: 6px 16px }
+.evidence-verdicts { display: flex; flex-wrap: wrap; gap: 6px; width: 100% }
+.evidence-verdicts .evidence-pill { margin: 0; cursor: pointer; font-weight: 600 }
+.evidence-verdicts .evidence-pill.selected { border-color: currentColor }
+.evidence-verdicts input { display: none }
+
+.evidence-mini { font-size: 12px; white-space: nowrap }
+.evidence-mini span { margin-right: 6px }
+
+.evidence-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    margin: 6px 0
+}
+
+@media print {
+    .evidence-review, .evidence-summary-actions { display: none }
 }
