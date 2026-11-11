@@ -37,8 +37,22 @@ class CheckEvaluationEvidence implements ShouldQueue
             if (! $evaluation) {
                 return;
             }
+            $questions = [];
+            foreach ($evaluation->criteriaVersion->definition['functions'] as $funcKey => $func) {
+                foreach ($func['groups'] as $group) {
+                    foreach ($group['criteria'] as $q) {
+                        $questions["$funcKey.{$q['id']}"] = $q;
+                    }
+                }
+            }
             foreach ($evaluation->attachments()->where('analysis_status', 'pending')->orderBy('id')->get() as $attachment) {
-                $analyzer->analyze($attachment);
+                $q = $questions[$attachment->question_key] ?? null;
+                $analyzer->analyze($attachment, $q ? [
+                    'criterion' => $q['text'],
+                    'documents' => $q['evidence']['documents'] ?? [],
+                    'keywords' => $q['evidence']['keywords'] ?? [],
+                    'unit' => $evaluation->organization_name,
+                ] : []);
                 $checks->apply($evaluation->refresh());
             }
         } finally {

@@ -11,6 +11,7 @@ use App\Models\Organization;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use League\Flysystem\UnableToWriteFile;
 use Tests\TestCase;
 
 class EvaluationApiTest extends TestCase
@@ -92,6 +93,24 @@ class EvaluationApiTest extends TestCase
             ->assertJsonCount(1, 'attachments')
             ->assertJsonPath('attachments.0.name', 'Quyết định.pdf');
         Storage::disk('s3')->assertExists(Evaluation::first()->attachments()->first()->object_key);
+    }
+
+    public function test_storage_failure_returns_clear_message_and_saves_nothing(): void
+    {
+        $this->actingAsRole(['editor']);
+        $this->activateCriteria();
+        $payload = $this->validPayload();
+        $firstQ = array_key_first($payload['answers']['basic']);
+        Storage::shouldReceive('disk')->with('s3')->andReturn($disk = \Mockery::mock());
+        $disk->shouldReceive('putFileAs')->andThrow(UnableToWriteFile::atLocation('x', 'No more free space left'));
+        $disk->shouldReceive('delete');
+
+        $this->post('/api/v1/evaluations', $payload + [
+            'evidence' => ['basic' => [$firstQ => [UploadedFile::fake()->create('QD.pdf', 10, 'application/pdf')]]],
+        ], ['Accept' => 'application/json'])
+            ->assertStatus(503)
+            ->assertJsonPath('message', fn ($m) => str_contains($m, 'Kho lưu tệp minh chứng đang tạm thời không ghi được'));
+        $this->assertSame(0, Evaluation::count());
     }
 
     public function test_validation_messages_follow_old_form_rules(): void

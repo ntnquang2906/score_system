@@ -188,5 +188,6 @@ export default {
   'evidence.fact_signature': '✔ signature',
   'evidence.fact_digital_signature': '✔ digital signature',
   'evidence.fact_no_signature': '✘ signature',
+  'evidence.fact_ai': 'AI: {reason}',
   'evidence.fact_ocr': 'text recognised (OCR)',
 }

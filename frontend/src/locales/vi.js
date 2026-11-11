@@ -189,5 +189,6 @@ export default {
   'evidence.fact_signature': '✔ chữ ký',
   'evidence.fact_digital_signature': '✔ chữ ký số',
   'evidence.fact_no_signature': '✘ chữ ký',
+  'evidence.fact_ai': 'AI: {reason}',
   'evidence.fact_ocr': 'đã nhận dạng chữ (OCR)',
 }

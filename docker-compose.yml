@@ -42,8 +42,31 @@ services:
   evidence-ai:
     build: ./docker/evidence-ai
     image: score-evidence-ai:dev
+    environment:
+      VLM_URL: ${VLM_URL:-}                     # trống => chỉ OCR + xử lý ảnh; có GPU: http://vlm:11434
+      VLM_MODEL: ${VLM_MODEL:-qwen2.5vl:7b}
     cpus: 2
     mem_limit: 2g
+    restart: unless-stopped
+
+  # Mô hình AI đọc ảnh minh chứng (Ollama), cần GPU NVIDIA đã cài driver. Mặc định KHÔNG chạy, bật bằng:
+  #   docker compose --profile gpu up -d vlm && docker compose exec vlm ollama pull qwen2.5vl:7b
+  #   rồi đặt VLM_URL=http://vlm:11434 trong .env và docker compose up -d evidence-ai
+  vlm:
+    image: ollama/ollama:0.12.6
+    profiles: [gpu]
+    environment:
+      OLLAMA_KEEP_ALIVE: 24h                    # giữ mô hình trong bộ nhớ GPU giữa các lần đọc
+      OLLAMA_NUM_PARALLEL: 1
+    volumes:
+      - vlmdata:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     restart: unless-stopped
 
   postgres:
@@ -116,6 +139,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  vlmdata:
   pgdata:
   redisdata:
   s3data:

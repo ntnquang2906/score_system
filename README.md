@@ -133,8 +133,13 @@ Vai trò là realm role trong Keycloak, đi theo token; quyền kiểm tra ở `
 3. `ApplyEvidenceChecks` chấm lại cả bài, ghi lời giải thích (lý do, trích dẫn, trang) vào từng tiêu chí; trang kết quả tự cập nhật khi đọc xong.
 4. Lãnh đạo đặt lại kết luận kèm lý do (`evidence_reviews`); đổi tệp của tiêu chí thì kết luận đó hết hiệu lực.
    Dữ kiện tệp đã lưu nên sửa quy tắc là chấm lại được ngay, không phải đọc lại tệp.
-5. Tắt bằng `EVIDENCE_CHECK_ENABLED=false` (chấm như cũ theo số liệu kê khai). Khi có GPU: thêm mô hình thị giác – ngôn ngữ vào
-   `evidence-ai` (trả thêm dữ kiện), phần kết luận và giao diện giữ nguyên.
+5. **Mô hình AI đọc ảnh (tuỳ chọn, cần GPU)**: service `vlm` (Ollama, `qwen2.5vl:7b`, profile `gpu`). Đặt `VLM_URL=http://vlm:11434`
+   thì `evidence-ai` gửi thêm ảnh trang đầu + trang có dấu/chữ ký cùng nội dung tiêu chí, nhận về dữ kiện `vlm` (loại văn bản,
+   có chứng minh được tiêu chí không và lý do, đơn vị, năm, dấu, chữ ký). `EvidenceChecker` ưu tiên nhận định này thay cho
+   so khớp từ khoá và ghi lý do của AI vào lời giải thích. Mô hình lỗi thì vẫn dùng kết quả OCR như bình thường.
+6. `php artisan evidence:dataset [--out=tệp.jsonl]`: xuất các tiêu chí đã được lãnh đạo kết luận (nhãn) kèm dữ kiện tệp, để
+   tinh chỉnh mô hình; in tỉ lệ khớp và bảng so sánh kết luận tự động với lãnh đạo.
+7. Tắt toàn bộ bằng `EVIDENCE_CHECK_ENABLED=false` (chấm như cũ theo số liệu kê khai).
 
 ## API (`/api/v1`)
 

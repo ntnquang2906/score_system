@@ -144,6 +144,27 @@ class EvidenceCheckerTest extends TestCase
         $this->assertSame('pass', $enough['status']);
     }
 
+    public function test_vision_model_judgement_is_preferred_when_available(): void
+    {
+        $vlm = fn (array $o) => ['vlm' => $o + ['model' => 'qwen2.5vl:7b', 'doc_type' => 'Thỏa thuận hợp tác', 'relevant' => 'yes',
+            'reason' => 'Thỏa thuận hợp tác giữa Viện và Đại học Kyoto', 'issuer' => 'Viện Trần Nhân Tông', 'mentions_unit' => true,
+            'year' => 2025, 'stamp' => true, 'signature' => true]];
+
+        // Ảnh chụp mờ: OCR gần như không đọc được, xử lý ảnh không thấy dấu; mô hình đọc được => đạt, kèm nhận định
+        $blurry = ['text' => 'mờ', 'readable' => false, 'stamps' => [], 'signatures' => []];
+        $r = $this->check('basic_collaboration', [$this->file($blurry + $vlm([]))]);
+        $this->assertSame('pass', $r['status']);
+        $this->assertStringContainsString('AI nhận định: Thỏa thuận hợp tác giữa Viện và Đại học Kyoto', $r['explain_vi']);
+
+        // Đúng từ khoá nhưng mô hình thấy không chứng minh được tiêu chí => không đạt, nêu lý do của mô hình
+        $r = $this->check('basic_collaboration', [$this->file($vlm(['relevant' => 'no', 'reason' => 'Đây là quyết định hỗ trợ kinh phí công bố, không phải hợp tác']))]);
+        $this->assertSame(['fail', ['irrelevant_ai']], [$r['status'], $r['reasons']]);
+        $this->assertStringContainsString('AI nhận định: Đây là quyết định hỗ trợ kinh phí công bố', $r['explain_vi']);
+
+        $r = $this->check('basic_collaboration', [$this->file($vlm(['relevant' => 'unclear', 'reason' => 'Không rõ nội dung hợp tác']))]);
+        $this->assertSame(['review', ['uncertain_ai']], [$r['status'], $r['reasons']]);
+    }
+
     public function test_reviewer_verdict_overrides_and_keeps_automatic_result(): void
     {
         $checker = new EvidenceChecker;

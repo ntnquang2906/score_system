@@ -92,6 +92,7 @@ function factLine(f) {
     parts.push(f.signature ? (f.digital_signature ? t('evidence.fact_digital_signature') : t('evidence.fact_signature')) : t('evidence.fact_no_signature'))
   }
   if (f.ocr) parts.push(t('evidence.fact_ocr'))
+  if (f.ai_reason) parts.push(t('evidence.fact_ai', { reason: f.ai_reason }))
   return parts.join(' · ')
 }
 

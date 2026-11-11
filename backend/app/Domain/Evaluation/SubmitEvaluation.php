@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use League\Flysystem\UnableToWriteFile;
 use Throwable;
 
 /**
@@ -119,6 +120,12 @@ final class SubmitEvaluation
         } catch (Throwable $e) {
             if ($this->stored) {
                 Storage::disk('s3')->delete($this->stored);
+            }
+            // Kho tệp không ghi được (vd ổ đĩa server đầy): báo rõ cho người nộp thay vì lỗi 500 chung chung
+            if ($e instanceof UnableToWriteFile) {
+                report($e);
+                abort(503, 'Kho lưu tệp minh chứng đang tạm thời không ghi được nên bài chưa được lưu. '
+                    .'Thông tin đã điền vẫn được giữ trên trình duyệt, vui lòng thử lại sau hoặc báo quản trị hệ thống.');
             }
             throw $e;
         }

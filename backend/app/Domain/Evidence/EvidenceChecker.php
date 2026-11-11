@@ -82,7 +82,11 @@ final class EvidenceChecker
         }
         $relevant = array_filter($readable, fn ($f) => $f['relevant'] !== 'no');
         if (! $relevant) {
-            return $this->conclude(self::FAIL, [$this->reason('irrelevant', ['terms' => implode(', ', array_slice($spec['keywords'], 0, 4))])], $facts);
+            $ai = array_values(array_filter(array_column($readable, 'ai_reason')));
+
+            return $this->conclude(self::FAIL, [$ai
+                ? $this->reason('irrelevant_ai', ['reason' => $ai[0]])
+                : $this->reason('irrelevant', ['terms' => implode(', ', array_slice($spec['keywords'], 0, 4))])], $facts);
         }
         $own = array_filter($relevant, fn ($f) => $f['unit'] !== 'other');
         if (! $own) {
@@ -91,9 +95,12 @@ final class EvidenceChecker
 
         $reasons = [];
         if (! array_filter($own, fn ($f) => $f['relevant'] === 'yes')) {
-            $reasons[] = array_filter($own, fn ($f) => $f['relevant'] === 'unclear_type')
-                ? $this->reason('uncertain_type', ['documents' => implode(', ', array_slice($spec['documents'], 0, 4))])
-                : $this->reason('uncertain_topic', ['terms' => implode(', ', array_slice($spec['keywords'], 0, 4))]);
+            $ai = array_values(array_filter(array_column($own, 'ai_reason')));
+            $reasons[] = match (true) {
+                (bool) $ai => $this->reason('uncertain_ai', ['reason' => $ai[0]]),
+                (bool) array_filter($own, fn ($f) => $f['relevant'] === 'unclear_type') => $this->reason('uncertain_type', ['documents' => implode(', ', array_slice($spec['documents'], 0, 4))]),
+                default => $this->reason('uncertain_topic', ['terms' => implode(', ', array_slice($spec['keywords'], 0, 4))]),
+            };
         }
         if (! empty($spec['signed'])) {
             $editable = ! array_filter($own, fn ($f) => ! $f['editable']);
@@ -162,7 +169,8 @@ final class EvidenceChecker
         }
 
         $text = new TextFacts((string) ($a['text'] ?? ''));
-        $readable = (bool) ($a['readable'] ?? false);
+        $vlm = $a['vlm'] ?? null;   // nhận định của mô hình thị giác - ngôn ngữ (khi có GPU), ưu tiên hơn so khớp từ khoá
+        $readable = ($a['readable'] ?? false) || $vlm;
 
         // Chủ đề văn bản nằm ở trích yếu: tiêu đề loại văn bản + dòng "Về việc..." ngay sau đó
         // (không có loại văn bản thì lấy phần đầu). Từ khoá chỉ có trong thân (vd tên "Phòng ... Hợp tác"
@@ -180,6 +188,7 @@ final class EvidenceChecker
         // Không kết luận "không liên quan" khi chữ quá ít/OCR kém, hoặc đúng loại văn bản mà chưa thấy từ khoá
         $relevant = match (true) {
             ! $readable => 'unreadable',
+            (bool) $vlm => ['yes' => 'yes', 'no' => 'no'][$vlm['relevant'] ?? ''] ?? 'unclear_topic',
             $subject && (! $spec['documents'] || $docType) => 'yes',
             $subject => 'unclear_type',
             $keyword || $docType || $text->length() < 200 || in_array('garbled_text', $a['warnings'] ?? [], true) => 'unclear_topic',
@@ -190,8 +199,11 @@ final class EvidenceChecker
         $unit = match (true) {
             $text->mentionsUnit($unitName) => 'yes',
             ($other = $text->headerUnit($otherUnits)) !== null => 'other',
+            ! empty($vlm['mentions_unit']) => 'yes',
             default => 'unclear',
         };
+        $stamp = ! empty($a['stamps']) || ! empty($vlm['stamp']);
+        $signature = ! empty($a['signatures']) || ! empty($vlm['signature']);
 
         $warnings = $a['warnings'] ?? [];
         $unsignedBlocks = array_filter($a['signature_blocks'] ?? [], fn ($b) => ! $b['signed']);
@@ -200,20 +212,21 @@ final class EvidenceChecker
             'kind' => $a['kind'] ?? null,
             'readable' => $readable,
             'relevant' => $relevant,
-            'doc_type' => $docType ? mb_convert_case($docType['term'], MB_CASE_TITLE) : null,
+            'doc_type' => $docType ? mb_convert_case($docType['term'], MB_CASE_TITLE) : (($vlm['doc_type'] ?? '') ?: null),
+            'ai_reason' => $vlm['reason'] ?? null,
             'keywords' => $text->found($spec['keywords']),
             'quote' => $hit ? $text->quote($hit['offset']) : null,
             'page' => $hit ? $text->pageAt($hit['offset']) : null,
             'unit' => $unit,
             'other_unit' => $other,
-            'year' => $text->year(),
-            'stamp' => ! empty($a['stamps']),
+            'year' => $text->year() ?? $vlm['year'] ?? null,
+            'stamp' => $stamp,
             'stamp_page' => $a['stamps'][0]['page'] ?? null,
-            'signature' => ! empty($a['signatures']),
+            'signature' => $signature,
             'digital_signature' => (bool) array_filter($a['signatures'] ?? [], fn ($s) => $s['method'] === 'digital'),
-            'unsigned_block' => ! empty($a['signatures']) ? null : (reset($unsignedBlocks)['title'] ?? null),
+            'unsigned_block' => $signature ? null : (reset($unsignedBlocks)['title'] ?? null),
             'editable' => in_array('editable_document', $warnings, true),
-            'no_color' => in_array('no_color', $warnings, true) && empty($a['stamps']),
+            'no_color' => in_array('no_color', $warnings, true) && ! $stamp,
             'count' => ($a['kind'] ?? null) === 'xlsx' ? (int) ($a['rows'] ?? 0) : $text->itemCount(),
             'ocr' => ! empty($a['ocr_pages']),
         ];
@@ -291,6 +304,9 @@ final class EvidenceChecker
             };
             $parts[] = $what.($f['stamp_page'] ? ($lang === 'vi' ? " (trang {$f['stamp_page']})" : " (page {$f['stamp_page']})") : '');
         }
+        if ($f['ai_reason'] ?? null) {
+            $parts[] = ($lang === 'vi' ? 'AI nhận định: ' : 'AI: ').rtrim($f['ai_reason'], '.');
+        }
         if (count($files) > 1) {
             $parts[] = $lang === 'vi' ? 'cùng '.(count($files) - 1).' tệp khác' : 'plus '.(count($files) - 1).' other file(s)';
         }
@@ -309,6 +325,8 @@ final class EvidenceChecker
             'irrelevant' => ["tệp không liên quan đến tiêu chí (không thấy nội dung như: {$p['terms']})", "the file is unrelated to the criterion (no content such as: {$p['terms']})"],
             'other_unit' => ["đây là văn bản của đơn vị khác ({$p['other']}), không phải của {$p['unit']}", "this is a document of another unit ({$p['other']}), not of {$p['unit']}"],
             'uncertain_type' => ["chưa chắc đúng loại văn bản yêu cầu ({$p['documents']})", "not clearly the required document type ({$p['documents']})"],
+            'irrelevant_ai' => ["tệp không chứng minh được tiêu chí (AI nhận định: {$p['reason']})", "the file does not prove the criterion (AI: {$p['reason']})"],
+            'uncertain_ai' => ["chưa chắc tệp chứng minh được tiêu chí (AI nhận định: {$p['reason']})", "not clear that the file proves the criterion (AI: {$p['reason']})"],
             'uncertain_topic' => ["chưa chắc đúng nội dung tiêu chí: tiêu đề/trích yếu không nhắc tới {$p['terms']}", "the subject line does not clearly match the criterion ({$p['terms']})"],
             'editable' => ['tệp Word/Excel không có chữ ký, con dấu; nên tải bản PDF/ảnh chụp văn bản đã ký', 'a Word/Excel file carries no signature or stamp; upload a signed PDF/scan instead'],
             'no_stamp' => ['không thấy con dấu', 'no stamp found'],

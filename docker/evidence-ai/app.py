@@ -9,9 +9,12 @@ theo quy tắc của từng tiêu chí, xem backend/app/Domain/Evidence):
 Không giới hạn định dạng: PDF, ảnh (kể cả HEIC/AVIF, TIFF nhiều trang), Word/Excel/PowerPoint mọi đời
 và OpenDocument (qua LibreOffice), tệp nén (zip, rar, 7z, tar...: đọc từng tệp bên trong), tệp chữ.
 Định dạng lạ thì thử mở bằng LibreOffice trước khi báo chưa hỗ trợ.
-Chạy hoàn toàn trên CPU. Khi có GPU sẽ bổ sung mô hình thị giác - ngôn ngữ tại đây.
+Chạy trên CPU. Có GPU: đặt VLM_URL (Ollama, vd http://vlm:11434) để thêm nhận định của mô hình thị giác - ngôn ngữ
+(đọc ảnh trang đầu + trang có dấu/chữ ký cùng nội dung tiêu chí) vào trường "vlm"; backend ưu tiên dùng khi có.
 """
+import base64
 import io
+import json
 import os
 import re
 import shutil
@@ -19,13 +22,14 @@ import subprocess
 import tempfile
 import time
 import unicodedata
+import urllib.request
 import zipfile
 
 import cv2
 import fitz
 import numpy as np
 import pytesseract
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile
 from PIL import Image, ImageSequence
 from pillow_heif import register_heif_opener
 
@@ -43,6 +47,27 @@ TEXT_EXT = {'txt', 'csv', 'tsv', 'md', 'html', 'htm', 'xml', 'json'}
 MAX_ARCHIVE_FILES = 30                 # số tệp tối đa đọc trong 1 tệp nén
 MAX_ARCHIVE_BYTES = 300 * 1024 * 1024  # tổng dung lượng giải nén tối đa (chống zip bomb)
 
+# Mô hình thị giác - ngôn ngữ (tuỳ chọn, cần GPU). Không đặt VLM_URL => chỉ dùng OCR + xử lý ảnh như trên.
+VLM_URL = os.getenv('VLM_URL', '').rstrip('/')
+VLM_MODEL = os.getenv('VLM_MODEL', 'qwen2.5vl:7b')
+VLM_TIMEOUT = int(os.getenv('VLM_TIMEOUT', '300'))
+VLM_IMAGE_SIZE = int(os.getenv('VLM_IMAGE_SIZE', '1280'))   # cạnh dài ảnh gửi mô hình; chạy CPU nên giảm (vd 768) cho nhanh
+VLM_TEXT_CHARS = int(os.getenv('VLM_TEXT_CHARS', '3000'))   # số ký tự chữ OCR gửi kèm
+VLM_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'doc_type': {'type': 'string'},                                   # loại văn bản (Quyết định, Biên bản ghi nhớ...)
+        'relevant': {'type': 'string', 'enum': ['yes', 'no', 'unclear']}, # có chứng minh được tiêu chí không
+        'reason': {'type': 'string'},                                     # lý do ngắn gọn (tiếng Việt)
+        'issuer': {'type': 'string'},                                     # cơ quan/đơn vị ban hành
+        'mentions_unit': {'type': 'boolean'},                             # có nhắc tới đơn vị được đánh giá
+        'year': {'type': ['integer', 'null']},                            # năm ban hành
+        'stamp': {'type': 'boolean'},
+        'signature': {'type': 'boolean'},
+    },
+    'required': ['doc_type', 'relevant', 'reason', 'issuer', 'mentions_unit', 'year', 'stamp', 'signature'],
+}
+
 # Dòng chức danh người ký (đã bỏ dấu, viết hoa)
 SIGNER_TITLE = re.compile(
     r'\b(HIEU TRUONG|VIEN TRUONG|GIAM DOC|CHU TICH|TRUONG KHOA|TRUONG PHONG|TRUONG BAN|CHU NHIEM|'
@@ -55,16 +80,54 @@ app = FastAPI()
 
 @app.get('/health')
 def health():
-    return {'ok': True, 'engine': ENGINE}
+    return {'ok': True, 'engine': ENGINE, 'vlm': VLM_MODEL if VLM_URL else None}
 
 
 @app.post('/analyze')
-def analyze(file: UploadFile = File(...)):
+def analyze(file: UploadFile = File(...), context: str | None = Form(None)):
+    """context (JSON, tuỳ chọn): {criterion, documents, keywords, unit} - để mô hình biết cần kiểm chứng điều gì"""
     started = time.monotonic()
     out = read_any(file.file.read(), file.filename or '')
+    images = out.pop('_images', [])
     out['engine'] = ENGINE
+    if VLM_URL and context and images:
+        try:
+            out['vlm'] = ask_vlm(images, out['text'], json.loads(context))
+        except Exception as e:   # mô hình lỗi/quá tải: vẫn trả dữ kiện OCR như bình thường
+            out['warnings'].append('vlm_failed')
+            out['vlm_error'] = e.__class__.__name__
     out['duration_ms'] = int((time.monotonic() - started) * 1000)
     return out
+
+
+def ask_vlm(images, text, context):
+    """Hỏi mô hình (Ollama /api/chat, trả JSON theo VLM_SCHEMA) với tối đa 2 ảnh: trang đầu và trang cuối/có dấu"""
+    picked = [images[0][1]] + ([images[-1][1]] if len(images) > 1 else [])
+    prompt = (
+        'Bạn là chuyên viên thẩm định minh chứng đánh giá hoạt động khoa học và công nghệ.\n'
+        f"Tiêu chí cần chứng minh: {context.get('criterion', '')}\n"
+        f"Loại văn bản được chấp nhận: {', '.join(context.get('documents') or []) or 'bất kỳ'}\n"
+        f"Đơn vị được đánh giá: {context.get('unit', '')}\n"
+        'Ảnh là trang đầu và trang cuối (thường có chữ ký, con dấu) của tệp minh chứng. '
+        'Đoạn chữ đọc được từ tệp (có thể sai chính tả do OCR):\n'
+        f'"""{text[:VLM_TEXT_CHARS]}"""\n'
+        'Hãy xác định: loại văn bản; tệp có chứng minh được tiêu chí trên không (yes/no/unclear) và lý do ngắn gọn bằng tiếng Việt; '
+        'cơ quan ban hành; văn bản có nhắc tới đơn vị được đánh giá không; năm ban hành; có con dấu đỏ không; có chữ ký không. '
+        'Chỉ trả lời bằng JSON.'
+    )
+    body = {
+        'model': VLM_MODEL, 'stream': False, 'format': VLM_SCHEMA, 'options': {'temperature': 0},
+        'messages': [{'role': 'user', 'content': prompt, 'images': [jpeg_base64(img) for img in picked]}],
+    }
+    request = urllib.request.Request(f'{VLM_URL}/api/chat', data=json.dumps(body).encode(), headers={'Content-Type': 'application/json'})
+    with urllib.request.urlopen(request, timeout=VLM_TIMEOUT) as response:
+        answer = json.loads(json.loads(response.read())['message']['content'])
+    return {'model': VLM_MODEL, **{k: answer.get(k) for k in VLM_SCHEMA['properties']}}
+
+
+def jpeg_base64(img):
+    ok, buf = cv2.imencode('.jpg', fit(img, VLM_IMAGE_SIZE), [cv2.IMWRITE_JPEG_QUALITY, 85])
+    return base64.b64encode(buf.tobytes()).decode()
 
 
 def read_any(data, name, depth=0):
@@ -249,6 +312,7 @@ def read_archive(data, name, depth):
         if len(files) > MAX_ARCHIVE_FILES:
             out['warnings'].append('too_many_files')
         for r in inner:
+            out.setdefault('_images', []).extend(r.pop('_images', []))
             out['files'].append({'name': r['name'], 'kind': r['kind'], 'readable': r['readable']})
             out['pages'] += r['pages']
             texts.append(f"[{r['name']}]\n{r['text']}")
@@ -353,6 +417,7 @@ def pdf_lines(page, scale):
 
 
 def inspect_page(out, img, lines, page_no):
+    out.setdefault('_images', []).append((page_no, img))   # ảnh trang đã dựng, dùng lại cho mô hình (không trả ra ngoài)
     if is_grayscale(img):
         if 'no_color' not in out['warnings']:
             out['warnings'].append('no_color')   # bản scan đen trắng: không nhận ra màu đỏ của con dấu
