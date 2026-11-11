@@ -53,19 +53,25 @@ VLM_MODEL = os.getenv('VLM_MODEL', 'qwen2.5vl:7b')
 VLM_TIMEOUT = int(os.getenv('VLM_TIMEOUT', '300'))
 VLM_IMAGE_SIZE = int(os.getenv('VLM_IMAGE_SIZE', '1280'))   # cạnh dài ảnh gửi mô hình; chạy CPU nên giảm (vd 768) cho nhanh
 VLM_TEXT_CHARS = int(os.getenv('VLM_TEXT_CHARS', '3000'))   # số ký tự chữ OCR gửi kèm
-VLM_SCHEMA = {
+# Bước 1 (đọc ảnh): dữ kiện của văn bản. Bước 2 (chỉ chữ): trích yếu có trực tiếp chứng minh tiêu chí không.
+# Tách 2 bước vì mô hình 7B đọc tốt nhưng gộp "đọc + phán đoán" trong 1 câu hỏi thì hay kết luận dễ dãi.
+VLM_READ_SCHEMA = {
     'type': 'object',
     'properties': {
         'doc_type': {'type': 'string'},                                   # loại văn bản (Quyết định, Biên bản ghi nhớ...)
-        'relevant': {'type': 'string', 'enum': ['yes', 'no', 'unclear']}, # có chứng minh được tiêu chí không
-        'reason': {'type': 'string'},                                     # lý do ngắn gọn (tiếng Việt)
+        'subject': {'type': 'string'},                                    # trích yếu / nội dung chính
         'issuer': {'type': 'string'},                                     # cơ quan/đơn vị ban hành
         'mentions_unit': {'type': 'boolean'},                             # có nhắc tới đơn vị được đánh giá
         'year': {'type': ['integer', 'null']},                            # năm ban hành
         'stamp': {'type': 'boolean'},
         'signature': {'type': 'boolean'},
     },
-    'required': ['doc_type', 'relevant', 'reason', 'issuer', 'mentions_unit', 'year', 'stamp', 'signature'],
+    'required': ['doc_type', 'subject', 'issuer', 'mentions_unit', 'year', 'stamp', 'signature'],
+}
+VLM_JUDGE_SCHEMA = {
+    'type': 'object',
+    'properties': {'relevant': {'type': 'string', 'enum': ['yes', 'no', 'unclear']}, 'reason': {'type': 'string'}},
+    'required': ['relevant', 'reason'],
 }
 
 # Dòng chức danh người ký (đã bỏ dấu, viết hoa)
@@ -101,28 +107,36 @@ def analyze(file: UploadFile = File(...), context: str | None = Form(None)):
 
 
 def ask_vlm(images, text, context):
-    """Hỏi mô hình (Ollama /api/chat, trả JSON theo VLM_SCHEMA) với tối đa 2 ảnh: trang đầu và trang cuối/có dấu"""
+    """Mô hình đọc tối đa 2 ảnh (trang đầu, trang cuối/có dấu) lấy dữ kiện, rồi phán đoán riêng trích yếu so với tiêu chí"""
     picked = [images[0][1]] + ([images[-1][1]] if len(images) > 1 else [])
-    prompt = (
-        'Bạn là chuyên viên thẩm định minh chứng đánh giá hoạt động khoa học và công nghệ.\n'
-        f"Tiêu chí cần chứng minh: {context.get('criterion', '')}\n"
-        f"Loại văn bản được chấp nhận: {', '.join(context.get('documents') or []) or 'bất kỳ'}\n"
-        f"Đơn vị được đánh giá: {context.get('unit', '')}\n"
-        'Ảnh là trang đầu và trang cuối (thường có chữ ký, con dấu) của tệp minh chứng. '
-        'Đoạn chữ đọc được từ tệp (có thể sai chính tả do OCR):\n'
+    facts = chat(VLM_READ_SCHEMA, [jpeg_base64(img) for img in picked], (
+        'Ảnh là trang đầu và trang cuối (thường có chữ ký, con dấu) của một văn bản minh chứng. '
+        f'Đơn vị được đánh giá: {context.get("unit", "")}\n'
+        'Đoạn chữ đọc được từ văn bản (có thể sai chính tả do OCR):\n'
         f'"""{text[:VLM_TEXT_CHARS]}"""\n'
-        'Hãy xác định: loại văn bản; tệp có chứng minh được tiêu chí trên không (yes/no/unclear) và lý do ngắn gọn bằng tiếng Việt; '
-        'cơ quan ban hành; văn bản có nhắc tới đơn vị được đánh giá không; năm ban hành; có con dấu đỏ không; có chữ ký không. '
-        'Chỉ trả lời bằng JSON.'
-    )
-    body = {
-        'model': VLM_MODEL, 'stream': False, 'format': VLM_SCHEMA, 'options': {'temperature': 0},
-        'messages': [{'role': 'user', 'content': prompt, 'images': [jpeg_base64(img) for img in picked]}],
-    }
+        'Hãy cho biết: doc_type (loại văn bản); subject (trích yếu, tức nội dung chính, thường ở dòng "Về việc..." ngay dưới tên '
+        'loại văn bản, 1 câu); issuer (cơ quan ban hành); mentions_unit (có nhắc tới đơn vị được đánh giá không); year (năm ban hành); '
+        'stamp (có con dấu đỏ không); signature (có chữ ký không). Chỉ trả lời JSON, bằng tiếng Việt.'
+    ))
+    judge = chat(VLM_JUDGE_SCHEMA, [], (
+        f'Tiêu chí đánh giá: {context.get("criterion", "")}\n'
+        f'Loại văn bản được chấp nhận: {", ".join(context.get("documents") or []) or "bất kỳ"}\n'
+        f'Minh chứng nộp: {facts.get("doc_type", "")} "{facts.get("subject", "")}"\n'
+        'Minh chứng này có TRỰC TIẾP chứng minh tiêu chí không? Chỉ xét nội dung chính (trích yếu) của văn bản, không suy diễn. '
+        'Ví dụ: tiêu chí về hợp tác cần văn bản về hợp tác (thoả thuận, biên bản ghi nhớ, hợp đồng hợp tác); văn bản về chủ đề khác '
+        '(hỗ trợ kinh phí, khen thưởng, tài chính...) là "no". Không đủ thông tin thì "unclear". Trả lời JSON bằng tiếng Việt.'
+    ))
+    return {'model': VLM_MODEL, **facts, **judge}
+
+
+def chat(schema, images, prompt):
+    """Gọi Ollama /api/chat, trả JSON theo schema"""
+    message = {'role': 'user', 'content': prompt, **({'images': images} if images else {})}
+    body = {'model': VLM_MODEL, 'stream': False, 'format': schema, 'options': {'temperature': 0}, 'messages': [message]}
     request = urllib.request.Request(f'{VLM_URL}/api/chat', data=json.dumps(body).encode(), headers={'Content-Type': 'application/json'})
     with urllib.request.urlopen(request, timeout=VLM_TIMEOUT) as response:
         answer = json.loads(json.loads(response.read())['message']['content'])
-    return {'model': VLM_MODEL, **{k: answer.get(k) for k in VLM_SCHEMA['properties']}}
+    return {k: answer.get(k) for k in schema['properties']}
 
 
 def jpeg_base64(img):

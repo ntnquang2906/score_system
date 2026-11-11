@@ -156,9 +156,15 @@ class EvidenceCheckerTest extends TestCase
         $this->assertSame('pass', $r['status']);
         $this->assertStringContainsString('AI nhận định: Thỏa thuận hợp tác giữa Viện và Đại học Kyoto', $r['explain_vi']);
 
-        // Đúng từ khoá nhưng mô hình thấy không chứng minh được tiêu chí => không đạt, nêu lý do của mô hình
-        $r = $this->check('basic_collaboration', [$this->file($vlm(['relevant' => 'no', 'reason' => 'Đây là quyết định hỗ trợ kinh phí công bố, không phải hợp tác']))]);
+        // AI bảo không chứng minh được, quy tắc cũng không thấy gì liên quan => không đạt, nêu lý do của AI
+        $salary = ['text' => "VIỆN TRẦN NHÂN TÔNG\nBẢNG LƯƠNG THÁNG 5\n".str_repeat('Nguyễn Văn B nhận 12.000.000 đồng tiền lương. ', 8)];
+        $r = $this->check('basic_collaboration', [$this->file($salary + $vlm(['relevant' => 'no', 'reason' => 'Đây là bảng lương, không phải văn bản hợp tác']))]);
         $this->assertSame(['fail', ['irrelevant_ai']], [$r['status'], $r['reasons']]);
+        $this->assertStringContainsString('AI nhận định: Đây là bảng lương', $r['explain_vi']);
+
+        // AI bảo không nhưng văn bản đúng loại/có từ khoá => cần xem lại (không trừ oan 0 điểm), kèm lý do của AI
+        $r = $this->check('basic_collaboration', [$this->file($vlm(['relevant' => 'no', 'reason' => 'Đây là quyết định hỗ trợ kinh phí công bố, không phải hợp tác']))]);
+        $this->assertSame(['review', ['uncertain_ai']], [$r['status'], $r['reasons']]);
         $this->assertStringContainsString('AI nhận định: Đây là quyết định hỗ trợ kinh phí công bố', $r['explain_vi']);
 
         $r = $this->check('basic_collaboration', [$this->file($vlm(['relevant' => 'unclear', 'reason' => 'Không rõ nội dung hợp tác']))]);

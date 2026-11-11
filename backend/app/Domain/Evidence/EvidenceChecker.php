@@ -186,13 +186,20 @@ final class EvidenceChecker
         $hit = $subject ?? $docType ?? $keyword;
 
         // Không kết luận "không liên quan" khi chữ quá ít/OCR kém, hoặc đúng loại văn bản mà chưa thấy từ khoá
-        $relevant = match (true) {
-            ! $readable => 'unreadable',
-            (bool) $vlm => ['yes' => 'yes', 'no' => 'no'][$vlm['relevant'] ?? ''] ?? 'unclear_topic',
+        $byRules = match (true) {
             $subject && (! $spec['documents'] || $docType) => 'yes',
             $subject => 'unclear_type',
             $keyword || $docType || $text->length() < 200 || in_array('garbled_text', $a['warnings'] ?? [], true) => 'unclear_topic',
             default => 'no',
+        };
+        // Có mô hình AI: AI thấy chứng minh được => có; AI bảo không mà quy tắc cũng không thấy gì liên quan => không;
+        // AI bảo không nhưng văn bản đúng loại/có từ khoá => chưa chắc (để lãnh đạo xem, tránh trừ oan 0 điểm)
+        $relevant = match (true) {
+            ! $readable => 'unreadable',
+            ! $vlm => $byRules,
+            ($vlm['relevant'] ?? '') === 'yes' => 'yes',
+            ($vlm['relevant'] ?? '') === 'no' && $byRules === 'no' => 'no',
+            default => 'unclear_topic',
         };
 
         $other = null;
